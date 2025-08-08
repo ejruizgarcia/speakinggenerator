@@ -1,0 +1,1018 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+
+// --- MOCK DATA FROM USER'S DOCS (Translated and Structured) ---
+const courseData = {
+    '1': {
+        level: '1st Year (A2, 12 years old)',
+        units: {
+            '1': { title: 'This is my life', vocabulary: ['Family', 'Physical descriptions', 'Personality', 'Friendships'], grammar: ['Present simple of to be', 'Present simple of to have got', 'Quantifiers', 'Indefinite pronouns', 'There is/are'], functions: ['Meeting people and making new friends', 'Writing a personal profile', 'Talking about facts and opinions'] },
+            '2': { title: 'Welcome to our school', vocabulary: ['Activities and routines', 'Leisure activities', 'School and facilities'], grammar: ['Present simple affirmative and negative', 'Adverbs of frequency', 'Present simple questions'], functions: ['Describing daily routines and activities', 'Talking about free time and hobbies', 'Describing the school'] },
+            '3': { title: 'What do you want to play?', vocabulary: ['Adjectives', 'Sports'], grammar: ['Comparative and superlative adjectives'], functions: ['Describing people, places, and things', 'Comparing different sports', 'Expressing personal preferences'] },
+            '4': { title: 'What we wear', vocabulary: ['Clothes', 'Adjectives to describe feelings'], grammar: ['Present continuous', 'Present simple vs. Present continuous'], functions: ['Describing what someone is wearing', 'Expressing actions happening now', 'Describing current feelings'] },
+            '5': { title: 'Eat up', vocabulary: ['Supermarkets', 'Food and drinks', 'Meals'], grammar: ['Countable and uncountable nouns', 'Quantifiers', 'Modal verbs of possibility, obligation, permission, and prohibition'], functions: ['Describing food and drinks', 'Talking about grocery shopping', 'Expressing quantities'] },
+            '6': { title: 'Island Life', vocabulary: ['Geographical features', 'Weather', 'Animals'], grammar: ['Past simple of to be', 'Past time expressions', 'Regular and irregular verbs'], functions: ['Describing geographical features', 'Talking about the weather', 'Narrating past events'] },
+            '7': { title: 'Let’s start a band!', vocabulary: ['Musical instruments and bands', 'Life stages'], grammar: ['Object pronouns', 'Past simple affirmative, negative, and questions'], functions: ['Writing biographies', 'Telling a story', 'Expressing disagreement'] },
+            '8': { title: 'Around town', vocabulary: ['The city', 'Adjectives to describe places'], grammar: ['Future with be going to', 'Future with will for predictions'], functions: ['Describing cities and places', 'Expressing future plans and intentions', 'Making predictions'] },
+        }
+    },
+    '2': {
+        level: '2nd Year (A2/B1, 13 years old)',
+        units: {
+            '1': { title: 'Then and now', vocabulary: ['Verbs and opposites', 'Adjectives to describe feelings'], grammar: ['Past simple of regular and irregular verbs', 'Past of to be', 'there was / there were'], functions: ['Talking about past experiences', 'Describing feelings', 'Telling stories'] },
+            '2': { title: 'Art and Design', vocabulary: ['Adjectives and synonyms', 'Materials'], grammar: ['Past continuous', 'Past continuous vs. Past simple'], functions: ['Describing actions in progress in the past', 'Telling stories'] },
+            '3': { title: 'Fresh air', vocabulary: ['Leisure activities', 'Free time events'], grammar: ['Future simple for predictions', 'First conditional'], functions: ['Making plans', 'Expressing wishes and possibilities', 'Giving advice'] },
+            '4': { title: 'A helping hand', vocabulary: ['Personality adjectives', 'Phrasal verbs'], grammar: ['be going to for plans and intentions', 'will for predictions'], functions: ['Talking about plans and ambitions', 'Making predictions', 'Giving advice'] },
+            '5': { title: "Let's play", vocabulary: ['The senses', 'Verbs for interactive games'], grammar: ['Comparison of adverbs (comparative and superlative)'], functions: ['Describing sensations', 'Comparing things', 'Expressing opinions'] },
+            '6': { title: 'Move It!', vocabulary: ['Exercise and the human body', 'Personal hygiene'], grammar: ['Present perfect', 'ever and never'], functions: ['Talking about past experiences', 'Expressing habits', 'Giving advice'] },
+            '7': { title: 'Skills for life', vocabulary: ['Verbs and their noun forms', 'Modal verbs'], grammar: ['Modal verbs of advice, obligation, and prohibition'], functions: ['Giving advice', 'Expressing obligation and prohibition', 'Making suggestions'] },
+            '8': { title: 'What a Year', vocabulary: ['Summer holiday activities', 'Professions'], grammar: ['Reflexive and indefinite pronouns', 'Question tags'], functions: ['Talking about personal experiences', 'Asking questions', 'Expressing opinions'] },
+        }
+    },
+    '3': {
+        level: '3rd Year (B1, 14 years old)',
+        units: {
+            '1': { title: 'Teenage life: a survival guide', vocabulary: ['Household chores', 'Leisure activities'], grammar: ['Modal verbs of obligation, prohibition, permission, and advice (present and past)'], functions: ['Expressing obligations and advice', 'Giving instructions', 'Making suggestions'] },
+            '2': { title: 'Where in the world?', vocabulary: ['Tourist attractions', 'Holiday activities'], grammar: ['Future tenses (will, be going to, present simple/continuous for future)', 'First conditional'], functions: ['Making travel plans', 'Talking about future events', 'Describing places'] },
+            '3': { title: 'Make a difference', vocabulary: ['The environment', 'Compound nouns', 'Occupations'], grammar: ['Second conditional', 'Indefinite pronouns'], functions: ['Expressing hypotheses and conditions', 'Talking about jobs and careers', 'Expressing opinions on social issues'] },
+            '4': { title: "What's the story?", vocabulary: ['Films', 'Extreme adjectives'], grammar: ['Past simple and continuous', 'Quantifiers'], functions: ['Narrating stories', 'Describing past events', 'Expressing opinions on films and books'] },
+            '5': { title: 'Connected', vocabulary: ['Smartphones', 'The business world'], grammar: ['used to', 'Present perfect with for and since'], functions: ['Talking about past habits and experiences', 'Expressing changes over time', 'Asking for clarification'] },
+            '6': { title: 'Aim High', vocabulary: ['Collocations', 'Life events'], grammar: ['Present perfect with ever and never', 'Present perfect vs. Past simple'], functions: ['Talking about life experiences', 'Expressing achievements and goals'] },
+            '7': { title: 'Brilliant!', vocabulary: ['Word building', 'Music-related verbs and nouns'], grammar: ['Passive voice (past and present)'], functions: ['Talking about music and artists', 'Describing processes'] },
+            '8': { title: 'Unexplained', vocabulary: ['Mysteries', 'Adjectives'], grammar: ['Modal verbs of deduction and speculation', 'Past perfect'], functions: ['Making guesses and deductions', 'Talking about past events and their connection to the present'] },
+        }
+    },
+    '4': {
+        level: '4th Year (B1/B2, 15 years old)',
+        units: {
+            '1': { title: 'Teen spirit', vocabulary: ['Phrasal verbs', 'Personality adjectives', 'Tourist and cultural attractions'], grammar: ['Present perfect tenses', 'used to / would', 'Past simple vs. Present perfect'], functions: ['Talking about similarities and differences', 'Narrating past events'] },
+            '2': { title: 'In business', vocabulary: ['Money and business', 'Personal skills'], grammar: ['Present perfect tenses', 'Question forms'], functions: ['Giving a good presentation', 'Discussing what makes a business successful'] },
+            '3': { title: 'Planet Earth', vocabulary: ['Fundraising', 'Nature and the environment'], grammar: ['Future tenses (will, be going to, present simple/continuous)', 'Future continuous'], functions: ['Asking for and giving opinions', 'Discussing environmental activism'] },
+            '4': { title: 'Picture this', vocabulary: ['Photography', 'Prepositional phrases'], grammar: ['Modals of deduction and possibility (past and present)', 'Verbs with -ing and to infinitive'], functions: ['Speculating about a person or photo', 'Discussing hidden messages in images'] },
+            '5': { title: 'Survival', vocabulary: ['Survival equipment', 'Disasters'], grammar: ['Zero, first, and second conditionals', 'Third conditional', 'I wish / if only'], functions: ['Asking for, giving, and rejecting opinions', 'Discussing survival in natural disasters'] },
+            '6': { title: 'News travels fast', vocabulary: ['News and media', 'Compound nouns'], grammar: ['Reported speech', 'Reported questions, requests, and commands'], functions: ['Sharing news and responding', 'Showing sympathy', 'Discussing true vs. false news'] },
+            '7': { title: 'Future living', vocabulary: ['Technology adjectives', 'Buildings and materials'], grammar: ['Passive (past, present, future)', 'Quantifiers'], functions: ['Expressing and checking certainty and doubt', 'Discussing smart cities and AI'] },
+            '8': { title: 'Game on', vocabulary: ['Gaming', 'Abstract nouns'], grammar: ['Determiners', 'Defining and non-defining relative clauses'], functions: ['Encouraging others', 'Ordering events in a story', 'Discussing video games'] },
+        }
+    }
+};
+
+// --- Color Scheme Configuration ---
+const courseCardColors = {
+    '1': 'bg-sky-500 hover:bg-sky-600',
+    '2': 'bg-red-600 hover:bg-red-700',
+    '3': 'bg-yellow-500 hover:bg-yellow-600',
+    '4': 'bg-purple-600 hover:bg-purple-700'
+};
+
+const unitButtonColors = {
+    '1': ['bg-sky-100 hover:bg-sky-200 text-sky-800', 'bg-sky-200 hover:bg-sky-300 text-sky-800', 'bg-sky-300 hover:bg-sky-400 text-sky-900', 'bg-sky-400 hover:bg-sky-500 text-white', 'bg-sky-500 hover:bg-sky-600 text-white', 'bg-sky-600 hover:bg-sky-700 text-white', 'bg-sky-700 hover:bg-sky-800 text-white', 'bg-sky-800 hover:bg-sky-900 text-white'],
+    '2': ['bg-red-100 hover:bg-red-200 text-red-800', 'bg-red-200 hover:bg-red-300 text-red-800', 'bg-red-300 hover:bg-red-400 text-red-900', 'bg-red-400 hover:bg-red-500 text-white', 'bg-red-500 hover:bg-red-600 text-white', 'bg-red-600 hover:bg-red-700 text-white', 'bg-red-700 hover:bg-red-800 text-white', 'bg-red-800 hover:bg-red-900 text-white'],
+    '3': ['bg-yellow-100 hover:bg-yellow-200 text-yellow-800', 'bg-yellow-200 hover:bg-yellow-300 text-yellow-800', 'bg-yellow-300 hover:bg-yellow-400 text-yellow-900', 'bg-yellow-400 hover:bg-yellow-500 text-black', 'bg-yellow-500 hover:bg-yellow-600 text-black', 'bg-yellow-600 hover:bg-yellow-700 text-black', 'bg-yellow-700 hover:bg-yellow-800 text-black', 'bg-yellow-800 hover:bg-yellow-900 text-black'],
+    '4': ['bg-purple-100 hover:bg-purple-200 text-purple-800', 'bg-purple-200 hover:bg-purple-300 text-purple-800', 'bg-purple-300 hover:bg-purple-400 text-purple-900', 'bg-purple-400 hover:bg-purple-500 text-white', 'bg-purple-500 hover:bg-purple-600 text-white', 'bg-purple-600 hover:bg-purple-700 text-white', 'bg-purple-700 hover:bg-purple-800 text-white', 'bg-purple-800 hover:bg-purple-900 text-white']
+};
+
+const contentBoxStyles = {
+    '1': {
+        grammar: 'bg-white border-4 border-sky-500',
+        vocabulary: 'bg-white border-4 border-sky-500/75',
+        functions: 'bg-white border-4 border-sky-500/50',
+    },
+    '2': {
+        grammar: 'bg-white border-4 border-red-600',
+        vocabulary: 'bg-white border-4 border-red-600/75',
+        functions: 'bg-white border-4 border-red-600/50',
+    },
+    '3': {
+        grammar: 'bg-white border-4 border-yellow-500',
+        vocabulary: 'bg-white border-4 border-yellow-500/75',
+        functions: 'bg-white border-4 border-yellow-500/50',
+    },
+    '4': {
+        grammar: 'bg-white border-4 border-purple-600',
+        vocabulary: 'bg-white border-4 border-purple-600/75',
+        functions: 'bg-white border-4 border-purple-600/50',
+    }
+};
+
+// --- Helper Components ---
+
+const Modal = ({ children, onClose, wide }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-70 z-40 flex justify-center items-center p-4" onClick={onClose}>
+        <div 
+            className={`bg-gray-50 rounded-2xl shadow-2xl m-4 w-full relative flex flex-col ${wide ? 'max-w-7xl' : 'max-w-lg'} max-h-[90vh]`} 
+            onClick={e => e.stopPropagation()}
+        >
+            <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 bg-gray-200 rounded-full p-1 hover:bg-gray-300 hover:text-gray-800 text-2xl z-20">&times;</button>
+            <div className="overflow-y-auto p-6 md:p-8">
+                {children}
+            </div>
+        </div>
+    </div>
+);
+
+const ConfirmationModal = ({ onConfirm, onCancel, title, message }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 m-4 max-w-md w-full">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">{title}</h2>
+            <p className="text-gray-600 mb-8">{message}</p>
+            <div className="flex justify-end space-x-4">
+                <button onClick={onCancel} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+                <button onClick={onConfirm} className="px-6 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
+const DisplayActivityPage = ({ activity, onClose }) => {
+    if (!activity) return null;
+    return (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex flex-col p-8" onClick={onClose}>
+             <button onClick={onClose} className="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 transition-colors text-3xl z-10">&times;</button>
+             <div className="flex-grow flex items-center justify-center">
+                <div className="w-full max-w-4xl text-center text-white animate-fade-in">
+                    <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight shadow-lg">{activity.title}</h1>
+                    <p className="text-2xl md:text-4xl leading-relaxed">{activity.prompt}</p>
+                </div>
+             </div>
+        </div>
+    )
+};
+
+const NewsModal = ({ onClose }) => (
+    <Modal onClose={onClose}>
+        <div className="pt-8">
+            <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">Welcome to v.01!</h2>
+            <p className="text-center text-gray-600 mb-8">Here's a quick summary of what you can do:</p>
+            <ul className="space-y-4 text-gray-700">
+                <li className="flex items-start gap-4">
+                    <span className="text-xl">🤖</span>
+                    <div>
+                        <h3 className="font-bold">AI-Powered Generation</h3>
+                        <p>Generate 9 unique speaking activities (3 Quick Practices, 3 Mini-Projects, and 3 Projects) based on your chosen course and unit.</p>
+                    </div>
+                </li>
+                 <li className="flex items-start gap-4">
+                    <span className="text-xl">💾</span>
+                    <div>
+                        <h3 className="font-bold">Save & Organize</h3>
+                        <p>Save your favorite activities. They are automatically organized by course and unit in the "My Activities" section.</p>
+                    </div>
+                </li>
+                 <li className="flex items-start gap-4">
+                    <span className="text-xl">🖥️</span>
+                    <div>
+                        <h3 className="font-bold">Projector Mode</h3>
+                        <p>Display any activity in a clean, full-screen "blackboard" view, perfect for showing instructions to your students in class.</p>
+                    </div>
+                </li>
+                 <li className="flex items-start gap-4">
+                    <span className="text-xl">📄</span>
+                    <div>
+                        <h3 className="font-bold">Download as PDF</h3>
+                        <p>Export all activities for a specific unit into a stylish .pdf file for easy printing or sharing.</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </Modal>
+);
+
+
+// --- Main App Components ---
+
+const Header = ({ onNavigate, onShowNews }) => (
+    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-30">
+        <h1 className="text-xl font-bold text-gray-800">Speaking Activities Generator v.01</h1>
+        <div className="flex items-center space-x-4">
+            <button onClick={onShowNews} className="text-gray-500 hover:text-gray-800">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </button>
+            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all">
+                My Activities
+            </button>
+        </div>
+    </header>
+);
+
+const Footer = () => (
+    <footer className="text-center text-xs text-gray-500 p-4 mt-8 border-t bg-gray-50">
+        Esta app ha sido desarrollada por Eduardo Ruiz (@ejruizgarcia), 2025, utilizando Gemini y tiene licencia CC BY-NC 4.0.
+    </footer>
+);
+
+const HomePage = ({ onNavigate }) => (
+    <div className="flex flex-col items-center justify-center min-h-screen space-y-8 p-4 text-center">
+        <h1 className="text-5xl md:text-6xl font-bold text-gray-800">Speaking Activities Generator v.01</h1>
+        <p className="text-xl text-gray-600 max-w-2xl">Your personal assistant to create, generate, and manage speaking activities for your students.</p>
+        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+            <button onClick={() => onNavigate('create')} className="bg-green-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-green-700 transition-all transform hover:scale-105">
+                Create New Activity
+            </button>
+            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-blue-700 transition-all transform hover:scale-105">
+                My Activities
+            </button>
+        </div>
+    </div>
+);
+
+const CreateSpeakingPage = ({ onNavigate, onSaveSpeaking, onGoToSpeaking }) => {
+    const [selectedCourse, setSelectedCourse] = useState(null);
+    const [selectedUnit, setSelectedUnit] = useState(null);
+    const [generatedActivities, setGeneratedActivities] = useState({ quickPractices: [], miniProjects: [], projects: [] });
+    const [loading, setLoading] = useState(false);
+    const [reloadingType, setReloadingType] = useState(null);
+    const [showGeneratedModal, setShowGeneratedModal] = useState(false);
+
+    const handleRegenerate = async (activityType) => {
+        const countNeeded = 3 - generatedActivities[activityType].length;
+        if (countNeeded <= 0) return;
+
+        setReloadingType(activityType);
+
+        const courseInfo = courseData[selectedCourse];
+        const unitInfo = courseInfo.units[selectedUnit];
+        const existingTitles = generatedActivities[activityType].map(p => p.title).join('", "');
+        const typeDetails = {
+            quickPractices: 'Son actividades orales cortas (5-15 minutos) para parejas o pequeños grupos. Deben ser dinámicas y de práctica directa. SIN componente digital.',
+            miniProjects: 'Son actividades de aproximadamente 1 hora. OBLIGATORIAMENTE deben combinar oralidad con un componente digital sencillo (crear una infografía simple, grabar un audio corto, etc.).',
+            projects: 'Son proyectos de 2-3 clases en grupo. OBLIGATORIAMENTE deben centrarse en crear un "artefacto digital" (vídeo, podcast, presentación) para una presentación oral final.'
+        };
+
+        const prompt = `
+            Genera EXACTAMENTE ${countNeeded} nuevas propuestas de actividad de speaking del tipo "${activityType}" para un estudiante de ${courseInfo.level}, basadas en el tema de la unidad "${unitInfo.title}".
+            Descripción del tipo de actividad: ${typeDetails[activityType]}
+            Las actividades deben integrar esta gramática: ${unitInfo.grammar.join(', ')}.
+            Y este vocabulario: ${unitInfo.vocabulary.join(', ')}.
+            Las propuestas DEBEN ser diferentes de los siguientes títulos existentes: "${existingTitles}".
+            Cada propuesta debe incluir un "title" y un "prompt" (instrucciones claras y concisas para el alumno, de unas 20-25 palabras).
+            CRÍTICO: Responde ÚNICAMENTE con un array JSON válido de objetos, así: [{"title": "...", "prompt": "..."}, ...]. No añadas ningún otro texto.
+        `;
+
+        try {
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { 
+                contents: chatHistory,
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const apiKey = ""; // The API key will be automatically provided by the environment.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                const text = result.candidates[0].content.parts[0].text;
+                const newProposals = JSON.parse(text);
+                const newProposalsWithIds = newProposals.map(p => ({ ...p, id: Math.random(), status: 'new' }));
+                setGeneratedActivities(prev => ({
+                    ...prev,
+                    [activityType]: [...prev[activityType], ...newProposalsWithIds]
+                }));
+            } else {
+                throw new Error("Invalid API response structure");
+            }
+        } catch (error) {
+            console.error("Error re-generating proposals:", error);
+            // Optionally, show an error message to the user
+        } finally {
+            setReloadingType(null);
+        }
+    };
+
+
+    const handleGenerate = async () => {
+        if (!selectedCourse || !selectedUnit) return;
+        setLoading(true);
+        setGeneratedActivities({ quickPractices: [], miniProjects: [], projects: [] });
+
+        const courseInfo = courseData[selectedCourse];
+        const unitInfo = courseInfo.units[selectedUnit];
+        
+        const prompt = `
+            Genera propuestas de actividades de speaking para un estudiante de ${courseInfo.level}, basadas en el tema de la unidad "${unitInfo.title}".
+            Las actividades deben integrar esta gramática: ${unitInfo.grammar.join(', ')}.
+            Y este vocabulario: ${unitInfo.vocabulary.join(', ')}.
+
+            Debes crear tres tipos de actividades con especificaciones MUY CLARAS:
+            1.  **Quick Activities**: EXACTAMENTE 3 propuestas. Son actividades orales cortas (5-15 minutos) para parejas o pequeños grupos. Deben ser dinámicas y de práctica directa. SIN componente digital.
+
+            2.  **Mini-Projects**: EXACTAMENTE 3 propuestas. Son actividades de aproximadamente 1 hora. OBLIGATORIAMENTE deben combinar oralidad con un componente digital sencillo (crear una infografía simple, grabar un audio corto, etc.).
+
+            3.  **Projects**: EXACTAMENTE 3 propuestas. Son proyectos de 2-3 clases en grupo. OBLIGATORIAMENTE deben centrarse en crear un "artefacto digital" (vídeo, podcast, presentación) para una presentación oral final.
+
+            Cada propuesta debe incluir un "title" y un "prompt" (instrucciones claras y concisas para el alumno, de unas 20-25 palabras).
+
+            CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, con la siguiente estructura exacta:
+            {
+              "quickPractices": [{"title": "...", "prompt": "..."}, ...],
+              "miniProjects": [{"title": "...", "prompt": "..."}, ...],
+              "projects": [{"title": "...", "prompt": "..."}, ...]
+            }
+            No añadas texto o explicaciones fuera del JSON. El JSON debe ser perfecto y contener 3 propuestas en cada categoría.
+        `;
+
+        try {
+            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { 
+                contents: chatHistory,
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            const apiKey = ""; // The API key will be automatically provided by the environment.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                let text = result.candidates[0].content.parts[0].text;
+                try {
+                    const parsedJson = JSON.parse(text);
+                    const activitiesWithIds = {
+                        quickPractices: (parsedJson.quickPractices || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
+                        miniProjects: (parsedJson.miniProjects || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
+                        projects: (parsedJson.projects || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
+                    };
+                    setGeneratedActivities(activitiesWithIds);
+                    setShowGeneratedModal(true);
+                } catch (parseError) {
+                    console.error("Error parsing JSON:", parseError, "Original text:", text);
+                    setShowGeneratedModal(true);
+                    setGeneratedActivities({ error: "Sorry, there was an error processing the AI's response. The format was invalid." });
+                }
+            } else {
+                console.error("Error: Unexpected API response structure", result);
+                setShowGeneratedModal(true);
+                setGeneratedActivities({ error: "Sorry, there was an error generating the proposals. Please try again." });
+            }
+        } catch (error) {
+            console.error("Error generating proposals:", error);
+            setShowGeneratedModal(true);
+            setGeneratedActivities({ error: "An error occurred while communicating with the AI. Please check your connection and API key." });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSave = async (activityToSave, activityType) => {
+        setGeneratedActivities(prev => {
+            const newState = JSON.parse(JSON.stringify(prev));
+            const itemIndex = newState[activityType].findIndex(p => p.id === activityToSave.id);
+            if (itemIndex > -1) {
+                newState[activityType][itemIndex].status = 'saving';
+            }
+            return newState;
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        const newSpeaking = {
+            id: Date.now(),
+            course: selectedCourse,
+            unit: selectedUnit,
+            title: activityToSave.title,
+            prompt: activityToSave.prompt,
+            type: activityType
+        };
+
+        onSaveSpeaking(newSpeaking);
+        
+        setGeneratedActivities(prev => {
+            const newState = JSON.parse(JSON.stringify(prev));
+            const itemIndex = newState[activityType].findIndex(p => p.id === activityToSave.id);
+            if (itemIndex > -1) {
+                newState[activityType][itemIndex].status = 'saved';
+                newState[activityType][itemIndex].persistentId = newSpeaking.id;
+            }
+            return newState;
+        });
+    };
+
+    const handleDelete = (id, activityType) => {
+        const element = document.getElementById(`proposal-card-${id}`);
+        if (element) {
+            const direction = Math.random() > 0.5 ? 'fall-left-animation' : 'fall-right-animation';
+            element.classList.add(direction);
+            setTimeout(() => {
+                setGeneratedActivities(prev => {
+                    const newTypedActivities = prev[activityType].filter(p => p.id !== id);
+                    const newActivities = { ...prev, [activityType]: newTypedActivities };
+                    
+                    const totalActivities = (newActivities.quickPractices?.length || 0) + (newActivities.miniProjects?.length || 0) + (newActivities.projects?.length || 0);
+                    if (totalActivities === 0) {
+                        setShowGeneratedModal(false);
+                    }
+                    return newActivities;
+                });
+            }, 700);
+        }
+    };
+
+    const unitInfo = selectedCourse && selectedUnit ? courseData[selectedCourse].units[selectedUnit] : null;
+
+    const ProposalCard = ({ p, activityType, bgColor, titleColor }) => (
+         <div key={p.id} id={`proposal-card-${p.id}`} className={`p-5 rounded-2xl border-2 shadow-lg flex flex-col transition-all ${p.status === 'saved' ? 'border-green-500 bg-green-50' : `border-transparent ${bgColor}`}`}>
+            <h3 className={`text-lg font-bold ${titleColor} mb-2`}>{p.title}</h3>
+            <p className="text-gray-700 flex-grow mb-4 text-sm whitespace-pre-line">{p.prompt}</p>
+            <div className="flex items-center justify-center space-x-3 mt-auto pt-3 h-10">
+                {p.status === 'new' && <>
+                    <button onClick={() => handleSave(p, activityType)} className="flex-1 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">Save</button>
+                    <button onClick={() => handleDelete(p.id, activityType)} className="flex-1 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Discard</button>
+                </>}
+                {p.status === 'saving' && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>}
+                {p.status === 'saved' && <button onClick={() => onGoToSpeaking(p.persistentId)} className="text-green-600 font-bold flex items-center hover:underline">✓ Saved! Go to activity →</button>}
+            </div>
+        </div>
+    );
+
+    return (
+        <div className="p-4 md:p-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-6">Create a New Speaking Activity</h1>
+
+            <div className="mb-6 space-y-4">
+                <h2 className="text-2xl font-semibold text-gray-700 mb-3">Step 1: Select a Course</h2>
+                {!selectedCourse ? (
+                    Object.keys(courseData).map(courseId => (
+                        <button key={courseId} onClick={() => setSelectedCourse(courseId)}
+                            className={`w-full p-6 rounded-lg font-bold text-2xl text-white transition-all shadow-lg transform hover:scale-[1.02] ${courseCardColors[courseId]}`}>
+                            {courseId}º ESO
+                        </button>
+                    ))
+                ) : (
+                    <div className="animate-fade-in">
+                        <div className={`w-full p-6 rounded-lg font-bold text-2xl text-white shadow-lg ${courseCardColors[selectedCourse]}`}>
+                            {selectedCourse}º ESO
+                        </div>
+                        <button onClick={() => { setSelectedCourse(null); setSelectedUnit(null); }} className="mt-2 text-sm text-blue-600 hover:underline">Change course</button>
+                    </div>
+                )}
+            </div>
+
+            {selectedCourse && (
+                <div className="mb-6 animate-fade-in">
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-3">Step 2: Select a Unit</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                        {Object.keys(courseData[selectedCourse].units).map(unitId => (
+                            <button key={unitId} onClick={() => setSelectedUnit(unitId)}
+                                className={`p-4 rounded-lg font-semibold transition-all text-center flex flex-col justify-center items-center h-24 ${unitButtonColors[selectedCourse][parseInt(unitId) - 1]} ${selectedUnit === unitId ? 'ring-4 ring-offset-2 ring-green-500' : ''}`}>
+                                <span className="font-bold">Unit {unitId}</span>
+                                <span className="text-xs mt-1">{courseData[selectedCourse].units[unitId].title}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {unitInfo && (
+                <div className="mt-8 p-6 bg-white rounded-xl shadow-md animate-fade-in">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
+                        <div>
+                            <h3 className="text-2xl font-bold text-gray-800">{unitInfo.title}</h3>
+                            <p className="text-gray-500">{courseData[selectedCourse].level}</p>
+                        </div>
+                        <button onClick={handleGenerate} disabled={loading} className="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition-all transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Generating...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-xl">✨</span>
+                                    <span>Generate Activities (AI)</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-6 text-sm">
+                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].grammar}`}>
+                            <h4 className="font-bold text-gray-700 mb-2">Grammar</h4>
+                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.grammar.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                        </div>
+                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].vocabulary}`}>
+                            <h4 className="font-bold text-gray-700 mb-2">Vocabulary</h4>
+                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.vocabulary.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                        </div>
+                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].functions}`}>
+                            <h4 className="font-bold text-gray-700 mb-2">Language Functions</h4>
+                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.functions.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            {showGeneratedModal && (
+                <Modal onClose={() => setShowGeneratedModal(false)} wide={true}>
+                    <div className="pt-8">
+                        <h2 className="text-3xl font-bold text-center mb-1 text-gray-800">Generated Proposals</h2>
+                        <p className="text-center text-gray-500 mb-8">Here are 9 activity ideas for you. Choose the ones you like!</p>
+
+                        {generatedActivities.error ? (
+                            <div className="text-center p-8 bg-red-100 border-2 border-red-400 text-red-800 rounded-lg">
+                                <h3 className="font-bold text-xl mb-2">Oops! Something went wrong.</h3>
+                                <p>{generatedActivities.error}</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                <div>
+                                    <div className="flex justify-between items-center mb-4 border-b-2 border-blue-200 pb-2">
+                                        <h3 className="text-2xl font-bold text-blue-600">🗣️ Quick Activities</h3>
+                                        {generatedActivities.quickPractices?.length < 3 && (
+                                            <button onClick={() => handleRegenerate('quickPractices')} disabled={reloadingType} className="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-blue-600 disabled:bg-gray-400 flex items-center justify-center w-32">
+                                                {reloadingType === 'quickPractices' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        {generatedActivities.quickPractices?.map(p => <ProposalCard key={p.id} p={p} activityType="quickPractices" bgColor="bg-blue-50" titleColor="text-blue-800" />)}
+                                    </div>
+                                </div>
+                                 <div>
+                                    <div className="flex justify-between items-center mb-4 border-b-2 border-yellow-200 pb-2">
+                                        <h3 className="text-2xl font-bold text-yellow-600">📝 Mini-Projects</h3>
+                                        {generatedActivities.miniProjects?.length < 3 && (
+                                            <button onClick={() => handleRegenerate('miniProjects')} disabled={reloadingType} className="bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-yellow-600 disabled:bg-gray-400 flex items-center justify-center w-32">
+                                                {reloadingType === 'miniProjects' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        {generatedActivities.miniProjects?.map(p => <ProposalCard key={p.id} p={p} activityType="miniProjects" bgColor="bg-yellow-50" titleColor="text-yellow-800" />)}
+                                    </div>
+                                </div>
+                                 <div>
+                                    <div className="flex justify-between items-center mb-4 border-b-2 border-green-200 pb-2">
+                                        <h3 className="text-2xl font-bold text-green-600">🚀 Projects</h3>
+                                        {generatedActivities.projects?.length < 3 && (
+                                            <button onClick={() => handleRegenerate('projects')} disabled={reloadingType} className="bg-green-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-green-600 disabled:bg-gray-400 flex items-center justify-center w-32">
+                                                {reloadingType === 'projects' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="grid md:grid-cols-3 gap-6">
+                                        {generatedActivities.projects?.map(p => <ProposalCard key={p.id} p={p} activityType="projects" bgColor="bg-green-50" titleColor="text-green-800" />)}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                         <div className="mt-8 flex justify-end">
+                            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all">
+                                Go to My Activities
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
+};
+
+const EditSpeakingForm = ({ speaking, onSave, onCancel }) => {
+    const [title, setTitle] = useState(speaking.title);
+    const [prompt, setPrompt] = useState(speaking.prompt);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(speaking.id, { ...speaking, title, prompt });
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800">Edit Speaking Activity</h2>
+            <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
+                <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
+            </div>
+            <div>
+                <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">Prompt</label>
+                <textarea id="prompt" value={prompt} onChange={e => setPrompt(e.target.value)} rows="4" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+            </div>
+            <div className="flex justify-end space-x-3">
+                <button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save Changes</button>
+            </div>
+        </form>
+    );
+};
+
+const MySpeakingsPage = ({ speakings, onUpdateSpeaking, onDeleteSpeaking, scrollToSpeakingId, onScrollComplete, onNavigate, onDisplayActivity, isPdfLibReady }) => {
+    const [editingSpeaking, setEditingSpeaking] = useState(null);
+    const [activityToDelete, setActivityToDelete] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeFilter, setActiveFilter] = useState('all');
+    
+    const activityCardStyles = {
+        quickPractices: {
+            tag: 'bg-blue-600 text-white',
+            card: 'bg-blue-50'
+        },
+        miniProjects: {
+            tag: 'bg-yellow-500 text-white',
+            card: 'bg-yellow-50'
+        },
+        projects: {
+            tag: 'bg-green-600 text-white',
+            card: 'bg-green-50'
+        },
+        default: {
+            tag: 'bg-gray-500 text-white',
+            card: 'bg-gray-50'
+        }
+    };
+
+    const typeOrder = {
+        quickPractices: 1,
+        miniProjects: 2,
+        projects: 3,
+    };
+
+    const formatTypeName = (type) => {
+        if (!type) return 'Activity';
+        return type.replace(/([A-Z])/g, ' $1').replace('Practices', 'Practice').replace('s', '');
+    };
+
+    const filteredSpeakings = useMemo(() => {
+        let filtered = speakings;
+        if (activeFilter !== 'all') {
+            filtered = filtered.filter(w => w.course === activeFilter);
+        }
+        if (searchTerm) {
+            filtered = filtered.filter(w => 
+                w.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                w.prompt.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+        return filtered.sort((a, b) => b.id - a.id);
+    }, [speakings, searchTerm, activeFilter]);
+
+    const speakingsByCourseAndUnit = useMemo(() => {
+        return filteredSpeakings.reduce((acc, speaking) => {
+            const course = speaking.course || 'Uncategorized';
+            const unit = speaking.unit || 'Uncategorized';
+            if (!acc[course]) acc[course] = {};
+            if (!acc[course][unit]) acc[course][unit] = [];
+            acc[course][unit].push(speaking);
+            return acc;
+        }, {});
+    }, [filteredSpeakings]);
+
+    useEffect(() => {
+        if (scrollToSpeakingId) {
+            const element = document.getElementById(`speaking-${scrollToSpeakingId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.classList.add('flash-animation');
+                setTimeout(() => {
+                    element.classList.remove('flash-animation');
+                    onScrollComplete();
+                }, 1500);
+            } else {
+                onScrollComplete();
+            }
+        }
+    }, [scrollToSpeakingId, speakings, onScrollComplete]);
+
+    const handleUpdate = (id, updatedData) => {
+        onUpdateSpeaking(id, updatedData);
+        setEditingSpeaking(null);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (activityToDelete) {
+            onDeleteSpeaking(activityToDelete);
+            setActivityToDelete(null);
+        }
+    };
+
+    const handleDownloadUnitPDF = (courseId, unitId, activities) => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        const courseInfo = courseData[courseId];
+        const unitInfo = courseInfo.units[unitId];
+        
+        const pageMargin = 14;
+        const contentWidth = doc.internal.pageSize.getWidth() - (pageMargin * 2);
+        const colors = {
+            quick: [59, 130, 246],
+            mini: [245, 158, 11],
+            project: [16, 185, 129],
+            text: [31, 41, 55],
+            lightText: [107, 114, 128]
+        };
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.setTextColor(...colors.text);
+        doc.text("Speaking Activities", pageMargin, 20);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(14);
+        doc.setTextColor(...colors.lightText);
+        doc.text(`${courseId}º ESO | Unit ${unitId}: ${unitInfo.title}`, pageMargin, 28);
+        
+        let currentY = 45;
+
+        const addPageIfNeeded = (spaceNeeded) => {
+            if (currentY + spaceNeeded > doc.internal.pageSize.getHeight() - pageMargin) {
+                doc.addPage();
+                currentY = 20;
+            }
+        };
+        
+        const activityOrder = ['quickPractices', 'miniProjects', 'projects'];
+        const sectionDetails = {
+            quickPractices: { title: 'Quick Activities', color: colors.quick },
+            miniProjects: { title: 'Mini-Projects', color: colors.mini },
+            projects: { title: 'Projects', color: colors.project }
+        };
+
+        activityOrder.forEach(type => {
+            const relevantActivities = activities.filter(act => act.type === type).sort((a,b) => a.id - b.id);
+            if (relevantActivities.length > 0) {
+                addPageIfNeeded(20);
+                doc.setFillColor(...sectionDetails[type].color);
+                doc.rect(pageMargin, currentY - 6, contentWidth, 10, 'F');
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(255, 255, 255);
+                doc.text(sectionDetails[type].title, pageMargin + 4, currentY + 1);
+                currentY += 15;
+
+                relevantActivities.forEach(act => {
+                    doc.setFontSize(12);
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(...colors.text);
+                    
+                    let titleLines = doc.splitTextToSize(act.title, contentWidth - 10);
+                    addPageIfNeeded(titleLines.length * 6 + 15);
+                    doc.text(titleLines, pageMargin + 5, currentY);
+                    currentY += (titleLines.length * 5);
+
+                    doc.setFontSize(11);
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(...colors.lightText);
+                    let promptLines = doc.splitTextToSize(act.prompt, contentWidth - 10);
+                    addPageIfNeeded(promptLines.length * 5 + 8);
+                    doc.text(promptLines, pageMargin + 5, currentY + 2);
+                    currentY += (promptLines.length * 5) + 8;
+                });
+            }
+        });
+
+        doc.save(`Course_${courseId}_Unit_${unitId}_Activities.pdf`);
+    };
+
+    return (
+        <div className="p-4 md:p-8">
+            <div className="mb-8">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-4xl font-bold text-gray-800">My Speaking Activities</h1>
+                        <button onClick={() => onNavigate('home')} className="text-sm text-blue-600 hover:underline font-semibold whitespace-nowrap">
+                            &larr; Go back to main page
+                        </button>
+                    </div>
+                    <div className="relative">
+                         <input type="text" placeholder="Search activities..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-72 pl-10 pr-4 py-2 border rounded-lg"/>
+                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </div>
+                </div>
+                 <div className="flex flex-wrap gap-2 mt-4">
+                    <button onClick={() => setActiveFilter('all')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeFilter === 'all' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
+                    {Object.keys(courseData).map(courseId => (
+                        <button key={courseId} onClick={() => setActiveFilter(courseId)} className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-opacity ${courseCardColors[courseId]} ${activeFilter !== courseId && activeFilter !== 'all' ? 'opacity-50' : ''}`}>
+                            {courseId}º ESO
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {filteredSpeakings.length === 0 ? (
+                <div className="text-center py-16">
+                    <p className="text-xl text-gray-500">No speaking activities found.</p>
+                    <button onClick={() => onNavigate('create')} className="mt-4 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Create a new one!</button>
+                </div>
+            ) : (
+                <div className="space-y-10">
+                    {Object.keys(speakingsByCourseAndUnit).sort().map(courseId => (
+                        <div key={courseId}>
+                            <h2 className={`text-2xl font-bold mb-4 p-3 rounded-lg text-white ${courseCardColors[courseId]}`}>{courseId}º ESO</h2>
+                            <div className="space-y-6">
+                                    {Object.keys(speakingsByCourseAndUnit[courseId]).sort((a,b) => a - b).map(unitId => {
+                                        const unitInfo = courseData[courseId]?.units[unitId];
+                                        const unitColorClass = unitButtonColors[courseId]?.[unitId - 1] || 'bg-gray-200';
+                                        const activitiesForUnit = speakingsByCourseAndUnit[courseId][unitId];
+                                        return (
+                                            <div key={unitId}>
+                                                <div className={`flex justify-between items-center p-2 rounded-t-lg font-bold text-lg ${unitColorClass}`}>
+                                                    <span>Unit {unitId}: {unitInfo?.title}</span>
+                                                    <div className="flex items-center">
+                                                        <button 
+                                                            onClick={() => handleDownloadUnitPDF(courseId, unitId, activitiesForUnit)}
+                                                            className="p-1.5 rounded-full hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            title={isPdfLibReady ? "Download unit activities as PDF" : "PDF library is loading..."}
+                                                            disabled={!isPdfLibReady}
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+                                                    {activitiesForUnit.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]).map(speaking => {
+                                                        const speakingStyles = activityCardStyles[speaking.type] || activityCardStyles.default;
+                                                        return (
+                                                            <div key={speaking.id} id={`speaking-${speaking.id}`} className={`rounded-xl shadow-lg p-6 flex flex-col ${speakingStyles.card}`}>
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <h3 className="text-xl font-bold text-gray-800 flex-1 pr-2">{speaking.title}</h3>
+                                                                    <span className={`capitalize flex-shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${speakingStyles.tag}`}>
+                                                                        {formatTypeName(speaking.type)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-gray-700 flex-grow mb-4">{speaking.prompt}</p>
+                                                                <div className="flex justify-between items-center mt-auto border-t pt-3">
+                                                                    <button onClick={() => onDisplayActivity(speaking)} className="flex items-center gap-2 text-sm bg-orange-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-orange-600 transition-colors">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                                                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                        Display
+                                                                    </button>
+                                                                    <div className="flex items-center space-x-4">
+                                                                        <button onClick={() => setEditingSpeaking(speaking)} className="text-sm text-blue-600 hover:underline font-semibold">Edit</button>
+                                                                        <button onClick={() => setActivityToDelete(speaking.id)} className="text-red-500 hover:text-red-700 font-semibold" title="Delete Activity">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                            </svg>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {editingSpeaking && (
+                <Modal onClose={() => setEditingSpeaking(null)}>
+                    <EditSpeakingForm speaking={editingSpeaking} onSave={handleUpdate} onCancel={() => setEditingSpeaking(null)} />
+                </Modal>
+            )}
+            {activityToDelete && (
+                <ConfirmationModal 
+                    title="Delete Activity"
+                    message="Are you sure you want to permanently delete this activity? This action cannot be undone."
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setActivityToDelete(null)}
+                />
+            )}
+        </div>
+    );
+};
+
+function App() {
+    const [currentPage, setCurrentPage] = useState('home'); 
+    const [speakings, setSpeakings] = useState(() => {
+        try {
+            const saved = localStorage.getItem('speakings');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error("Failed to parse speakings from localStorage", e);
+            return [];
+        }
+    });
+    const [scrollToSpeakingId, setScrollToSpeakingId] = useState(null);
+    const [activityToDisplay, setActivityToDisplay] = useState(null);
+    const [showNewsModal, setShowNewsModal] = useState(false);
+    const [isPdfLibReady, setIsPdfLibReady] = useState(false);
+
+    useEffect(() => {
+        if (document.querySelector('script[src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"]')) {
+            setIsPdfLibReady(true);
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+        script.async = true;
+        script.onload = () => setIsPdfLibReady(true);
+        script.onerror = () => console.error("Failed to load jsPDF library.");
+        document.body.appendChild(script);
+
+        return () => {
+            if (document.body.contains(script)) {
+                document.body.removeChild(script);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('speakings', JSON.stringify(speakings));
+        } catch (e) {
+            console.error("Failed to save speakings to localStorage", e);
+        }
+    }, [speakings]);
+
+    const handleNavigate = (page) => setCurrentPage(page);
+
+    const handleSaveSpeaking = (newSpeaking) => {
+        setSpeakings(prev => [newSpeaking, ...prev]);
+    };
+    
+    const handleGoToSpeaking = (speakingId) => {
+        setCurrentPage('mySpeakings');
+        setScrollToSpeakingId(speakingId);
+    };
+    
+    const handleScrollComplete = () => {
+        setScrollToSpeakingId(null);
+    };
+    
+    const handleUpdateSpeaking = (id, updatedData) => {
+        setSpeakings(prev => prev.map(s => s.id === id ? updatedData : s));
+    };
+
+    const handleDeleteSpeaking = (id) => {
+        setSpeakings(prev => prev.filter(s => s.id !== id));
+    };
+    
+    return (
+        <>
+            <style>{`
+                @keyframes fall-left {
+                    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+                    100% { transform: translate(-200px, 300px) rotate(-45deg); opacity: 0; }
+                }
+                .fall-left-animation {
+                    animation: fall-left 0.7s forwards ease-in;
+                }
+                @keyframes fall-right {
+                    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+                    100% { transform: translate(200px, 300px) rotate(45deg); opacity: 0; }
+                }
+                .fall-right-animation {
+                    animation: fall-right 0.7s forwards ease-in;
+                }
+                .flash-animation {
+                    animation: flash 1.5s ease-out;
+                }
+                @keyframes flash {
+                    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+                    70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+                }
+                .animate-fade-in {
+                    animation: fadeIn 0.5s ease-in-out;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
+            <div className="min-h-screen bg-gray-50 font-sans">
+                {currentPage !== 'home' && <Header onNavigate={handleNavigate} onShowNews={() => setShowNewsModal(true)} />}
+                <main>
+                    {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
+                    {currentPage === 'create' && <CreateSpeakingPage onNavigate={handleNavigate} onSaveSpeaking={handleSaveSpeaking} onGoToSpeaking={handleGoToSpeaking} />}
+                    {currentPage === 'mySpeakings' && <MySpeakingsPage 
+                        onNavigate={handleNavigate} 
+                        speakings={speakings} 
+                        onUpdateSpeaking={handleUpdateSpeaking} 
+                        onDeleteSpeaking={handleDeleteSpeaking}
+                        scrollToSpeakingId={scrollToSpeakingId}
+                        onScrollComplete={handleScrollComplete}
+                        onDisplayActivity={setActivityToDisplay}
+                        isPdfLibReady={isPdfLibReady}
+                    />}
+                </main>
+                {currentPage !== 'home' && <Footer />}
+                <DisplayActivityPage activity={activityToDisplay} onClose={() => setActivityToDisplay(null)} />
+                {showNewsModal && <NewsModal onClose={() => setShowNewsModal(false)} />}
+            </div>
+        </>
+    );
+}
+
+export default App;

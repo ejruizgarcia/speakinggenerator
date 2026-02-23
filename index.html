@@ -1,1018 +1,2349 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craft Islands</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #7EC8E3;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 2s ease;
+        }
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            z-index: 10;
+        }
+        #instructions {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            max-width: 600px;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: rgba(255,255,255,0.8);
+        }
+        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+        
+        #interactionText {
+            position: absolute;
+            top: 55%;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px black;
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+        }
 
-// --- MOCK DATA FROM USER'S DOCS (Translated and Structured) ---
-const courseData = {
-    '1': {
-        level: '1st Year (A2, 12 years old)',
-        units: {
-            '1': { title: 'This is my life', vocabulary: ['Family', 'Physical descriptions', 'Personality', 'Friendships'], grammar: ['Present simple of to be', 'Present simple of to have got', 'Quantifiers', 'Indefinite pronouns', 'There is/are'], functions: ['Meeting people and making new friends', 'Writing a personal profile', 'Talking about facts and opinions'] },
-            '2': { title: 'Welcome to our school', vocabulary: ['Activities and routines', 'Leisure activities', 'School and facilities'], grammar: ['Present simple affirmative and negative', 'Adverbs of frequency', 'Present simple questions'], functions: ['Describing daily routines and activities', 'Talking about free time and hobbies', 'Describing the school'] },
-            '3': { title: 'What do you want to play?', vocabulary: ['Adjectives', 'Sports'], grammar: ['Comparative and superlative adjectives'], functions: ['Describing people, places, and things', 'Comparing different sports', 'Expressing personal preferences'] },
-            '4': { title: 'What we wear', vocabulary: ['Clothes', 'Adjectives to describe feelings'], grammar: ['Present continuous', 'Present simple vs. Present continuous'], functions: ['Describing what someone is wearing', 'Expressing actions happening now', 'Describing current feelings'] },
-            '5': { title: 'Eat up', vocabulary: ['Supermarkets', 'Food and drinks', 'Meals'], grammar: ['Countable and uncountable nouns', 'Quantifiers', 'Modal verbs of possibility, obligation, permission, and prohibition'], functions: ['Describing food and drinks', 'Talking about grocery shopping', 'Expressing quantities'] },
-            '6': { title: 'Island Life', vocabulary: ['Geographical features', 'Weather', 'Animals'], grammar: ['Past simple of to be', 'Past time expressions', 'Regular and irregular verbs'], functions: ['Describing geographical features', 'Talking about the weather', 'Narrating past events'] },
-            '7': { title: 'Let’s start a band!', vocabulary: ['Musical instruments and bands', 'Life stages'], grammar: ['Object pronouns', 'Past simple affirmative, negative, and questions'], functions: ['Writing biographies', 'Telling a story', 'Expressing disagreement'] },
-            '8': { title: 'Around town', vocabulary: ['The city', 'Adjectives to describe places'], grammar: ['Future with be going to', 'Future with will for predictions'], functions: ['Describing cities and places', 'Expressing future plans and intentions', 'Making predictions'] },
-        }
-    },
-    '2': {
-        level: '2nd Year (A2/B1, 13 years old)',
-        units: {
-            '1': { title: 'Then and now', vocabulary: ['Verbs and opposites', 'Adjectives to describe feelings'], grammar: ['Past simple of regular and irregular verbs', 'Past of to be', 'there was / there were'], functions: ['Talking about past experiences', 'Describing feelings', 'Telling stories'] },
-            '2': { title: 'Art and Design', vocabulary: ['Adjectives and synonyms', 'Materials'], grammar: ['Past continuous', 'Past continuous vs. Past simple'], functions: ['Describing actions in progress in the past', 'Telling stories'] },
-            '3': { title: 'Fresh air', vocabulary: ['Leisure activities', 'Free time events'], grammar: ['Future simple for predictions', 'First conditional'], functions: ['Making plans', 'Expressing wishes and possibilities', 'Giving advice'] },
-            '4': { title: 'A helping hand', vocabulary: ['Personality adjectives', 'Phrasal verbs'], grammar: ['be going to for plans and intentions', 'will for predictions'], functions: ['Talking about plans and ambitions', 'Making predictions', 'Giving advice'] },
-            '5': { title: "Let's play", vocabulary: ['The senses', 'Verbs for interactive games'], grammar: ['Comparison of adverbs (comparative and superlative)'], functions: ['Describing sensations', 'Comparing things', 'Expressing opinions'] },
-            '6': { title: 'Move It!', vocabulary: ['Exercise and the human body', 'Personal hygiene'], grammar: ['Present perfect', 'ever and never'], functions: ['Talking about past experiences', 'Expressing habits', 'Giving advice'] },
-            '7': { title: 'Skills for life', vocabulary: ['Verbs and their noun forms', 'Modal verbs'], grammar: ['Modal verbs of advice, obligation, and prohibition'], functions: ['Giving advice', 'Expressing obligation and prohibition', 'Making suggestions'] },
-            '8': { title: 'What a Year', vocabulary: ['Summer holiday activities', 'Professions'], grammar: ['Reflexive and indefinite pronouns', 'Question tags'], functions: ['Talking about personal experiences', 'Asking questions', 'Expressing opinions'] },
-        }
-    },
-    '3': {
-        level: '3rd Year (B1, 14 years old)',
-        units: {
-            '1': { title: 'Teenage life: a survival guide', vocabulary: ['Household chores', 'Leisure activities'], grammar: ['Modal verbs of obligation, prohibition, permission, and advice (present and past)'], functions: ['Expressing obligations and advice', 'Giving instructions', 'Making suggestions'] },
-            '2': { title: 'Where in the world?', vocabulary: ['Tourist attractions', 'Holiday activities'], grammar: ['Future tenses (will, be going to, present simple/continuous for future)', 'First conditional'], functions: ['Making travel plans', 'Talking about future events', 'Describing places'] },
-            '3': { title: 'Make a difference', vocabulary: ['The environment', 'Compound nouns', 'Occupations'], grammar: ['Second conditional', 'Indefinite pronouns'], functions: ['Expressing hypotheses and conditions', 'Talking about jobs and careers', 'Expressing opinions on social issues'] },
-            '4': { title: "What's the story?", vocabulary: ['Films', 'Extreme adjectives'], grammar: ['Past simple and continuous', 'Quantifiers'], functions: ['Narrating stories', 'Describing past events', 'Expressing opinions on films and books'] },
-            '5': { title: 'Connected', vocabulary: ['Smartphones', 'The business world'], grammar: ['used to', 'Present perfect with for and since'], functions: ['Talking about past habits and experiences', 'Expressing changes over time', 'Asking for clarification'] },
-            '6': { title: 'Aim High', vocabulary: ['Collocations', 'Life events'], grammar: ['Present perfect with ever and never', 'Present perfect vs. Past simple'], functions: ['Talking about life experiences', 'Expressing achievements and goals'] },
-            '7': { title: 'Brilliant!', vocabulary: ['Word building', 'Music-related verbs and nouns'], grammar: ['Passive voice (past and present)'], functions: ['Talking about music and artists', 'Describing processes'] },
-            '8': { title: 'Unexplained', vocabulary: ['Mysteries', 'Adjectives'], grammar: ['Modal verbs of deduction and speculation', 'Past perfect'], functions: ['Making guesses and deductions', 'Talking about past events and their connection to the present'] },
-        }
-    },
-    '4': {
-        level: '4th Year (B1/B2, 15 years old)',
-        units: {
-            '1': { title: 'Teen spirit', vocabulary: ['Phrasal verbs', 'Personality adjectives', 'Tourist and cultural attractions'], grammar: ['Present perfect tenses', 'used to / would', 'Past simple vs. Present perfect'], functions: ['Talking about similarities and differences', 'Narrating past events'] },
-            '2': { title: 'In business', vocabulary: ['Money and business', 'Personal skills'], grammar: ['Present perfect tenses', 'Question forms'], functions: ['Giving a good presentation', 'Discussing what makes a business successful'] },
-            '3': { title: 'Planet Earth', vocabulary: ['Fundraising', 'Nature and the environment'], grammar: ['Future tenses (will, be going to, present simple/continuous)', 'Future continuous'], functions: ['Asking for and giving opinions', 'Discussing environmental activism'] },
-            '4': { title: 'Picture this', vocabulary: ['Photography', 'Prepositional phrases'], grammar: ['Modals of deduction and possibility (past and present)', 'Verbs with -ing and to infinitive'], functions: ['Speculating about a person or photo', 'Discussing hidden messages in images'] },
-            '5': { title: 'Survival', vocabulary: ['Survival equipment', 'Disasters'], grammar: ['Zero, first, and second conditionals', 'Third conditional', 'I wish / if only'], functions: ['Asking for, giving, and rejecting opinions', 'Discussing survival in natural disasters'] },
-            '6': { title: 'News travels fast', vocabulary: ['News and media', 'Compound nouns'], grammar: ['Reported speech', 'Reported questions, requests, and commands'], functions: ['Sharing news and responding', 'Showing sympathy', 'Discussing true vs. false news'] },
-            '7': { title: 'Future living', vocabulary: ['Technology adjectives', 'Buildings and materials'], grammar: ['Passive (past, present, future)', 'Quantifiers'], functions: ['Expressing and checking certainty and doubt', 'Discussing smart cities and AI'] },
-            '8': { title: 'Game on', vocabulary: ['Gaming', 'Abstract nouns'], grammar: ['Determiners', 'Defining and non-defining relative clauses'], functions: ['Encouraging others', 'Ordering events in a story', 'Discussing video games'] },
-        }
-    }
-};
+        #zoneTitle {
+            position: absolute;
+            top: 15%;
+            width: 100%;
+            text-align: center;
+            color: #fdf5e6;
+            font-size: 38px;
+            font-family: 'Georgia', serif;
+            font-weight: bold;
+            text-shadow: 2px 2px 8px black, 0 0 15px rgba(0,0,0,0.8);
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        #zoneTitle.show {
+            opacity: 1;
+        }
 
-// --- Color Scheme Configuration ---
-const courseCardColors = {
-    '1': 'bg-sky-500 hover:bg-sky-600',
-    '2': 'bg-red-600 hover:bg-red-700',
-    '3': 'bg-yellow-500 hover:bg-yellow-600',
-    '4': 'bg-purple-600 hover:bg-purple-700'
-};
+        #loading {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px black;
+            display: none;
+            z-index: 20;
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: loadDots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes loadDots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
 
-const unitButtonColors = {
-    '1': ['bg-sky-100 hover:bg-sky-200 text-sky-800', 'bg-sky-200 hover:bg-sky-300 text-sky-800', 'bg-sky-300 hover:bg-sky-400 text-sky-900', 'bg-sky-400 hover:bg-sky-500 text-white', 'bg-sky-500 hover:bg-sky-600 text-white', 'bg-sky-600 hover:bg-sky-700 text-white', 'bg-sky-700 hover:bg-sky-800 text-white', 'bg-sky-800 hover:bg-sky-900 text-white'],
-    '2': ['bg-red-100 hover:bg-red-200 text-red-800', 'bg-red-200 hover:bg-red-300 text-red-800', 'bg-red-300 hover:bg-red-400 text-red-900', 'bg-red-400 hover:bg-red-500 text-white', 'bg-red-500 hover:bg-red-600 text-white', 'bg-red-600 hover:bg-red-700 text-white', 'bg-red-700 hover:bg-red-800 text-white', 'bg-red-800 hover:bg-red-900 text-white'],
-    '3': ['bg-yellow-100 hover:bg-yellow-200 text-yellow-800', 'bg-yellow-200 hover:bg-yellow-300 text-yellow-800', 'bg-yellow-300 hover:bg-yellow-400 text-yellow-900', 'bg-yellow-400 hover:bg-yellow-500 text-black', 'bg-yellow-500 hover:bg-yellow-600 text-black', 'bg-yellow-600 hover:bg-yellow-700 text-black', 'bg-yellow-700 hover:bg-yellow-800 text-black', 'bg-yellow-800 hover:bg-yellow-900 text-black'],
-    '4': ['bg-purple-100 hover:bg-purple-200 text-purple-800', 'bg-purple-200 hover:bg-purple-300 text-purple-800', 'bg-purple-300 hover:bg-purple-400 text-purple-900', 'bg-purple-400 hover:bg-purple-500 text-white', 'bg-purple-500 hover:bg-purple-600 text-white', 'bg-purple-600 hover:bg-purple-700 text-white', 'bg-purple-700 hover:bg-purple-800 text-white', 'bg-purple-800 hover:bg-purple-900 text-white']
-};
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            pointer-events: none;
+            text-align: right;
+            z-index: 5;
+        }
+        #coinCounter {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: gold;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px black;
+            z-index: 5;
+        }
+        #muteBtn {
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid white;
+            color: white;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
 
-const contentBoxStyles = {
-    '1': {
-        grammar: 'bg-white border-4 border-sky-500',
-        vocabulary: 'bg-white border-4 border-sky-500/75',
-        functions: 'bg-white border-4 border-sky-500/50',
-    },
-    '2': {
-        grammar: 'bg-white border-4 border-red-600',
-        vocabulary: 'bg-white border-4 border-red-600/75',
-        functions: 'bg-white border-4 border-red-600/50',
-    },
-    '3': {
-        grammar: 'bg-white border-4 border-yellow-500',
-        vocabulary: 'bg-white border-4 border-yellow-500/75',
-        functions: 'bg-white border-4 border-yellow-500/50',
-    },
-    '4': {
-        grammar: 'bg-white border-4 border-purple-600',
-        vocabulary: 'bg-white border-4 border-purple-600/75',
-        functions: 'bg-white border-4 border-purple-600/50',
-    }
-};
+        /* Disclaimer */
+        #disclaimer {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            text-shadow: 1px 1px 3px black;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 1;
+            transition: opacity 2s ease-in-out;
+        }
 
-// --- Helper Components ---
+        /* UI Modals */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+        .modal-content {
+            background: #fff;
+            color: #333;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-content h2 { margin-top: 0; text-align: center; }
+        .close-btn {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 24px; cursor: pointer;
+            font-weight: bold; color: #888;
+        }
+        .close-btn:hover { color: #333; }
 
-const Modal = ({ children, onClose, wide }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-40 flex justify-center items-center p-4" onClick={onClose}>
-        <div 
-            className={`bg-gray-50 rounded-2xl shadow-2xl m-4 w-full relative flex flex-col ${wide ? 'max-w-7xl' : 'max-w-lg'} max-h-[90vh]`} 
-            onClick={e => e.stopPropagation()}
-        >
-            <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 bg-gray-200 rounded-full p-1 hover:bg-gray-300 hover:text-gray-800 text-2xl z-20">&times;</button>
-            <div className="overflow-y-auto p-6 md:p-8">
-                {children}
-            </div>
+        /* Book UI */
+        .verb-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .verb-header { font-weight: bold; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+        .verb-row { display: contents; }
+        .verb-cell { padding: 5px 0; border-bottom: 1px solid #eee; }
+
+        /* Test UI */
+        .flashcard {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: opacity 0.5s;
+        }
+        .flashcard.correct { opacity: 0; pointer-events: none; height: 0; padding: 0; margin: 0; overflow: hidden; border: none; }
+        .flashcard-es { font-weight: bold; width: 150px; font-size: 18px; color: #2c3e50; }
+        .flashcard input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 120px;
+            font-size: 16px;
+        }
+        .check-btn {
+            background: #3498db; color: white; border: none; padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold;
+            margin-top: 20px; width: 100%;
+        }
+        .check-btn:hover { background: #2980b9; }
+        .emoji-feedback { font-size: 20px; min-width: 30px; text-align: center; }
+
+        /* Parchment Style */
+        .parchment-box {
+            background: #fdf5e6 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" opacity="0.04"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" stitchTiles="stitch"/></filter><rect width="200" height="200" filter="url(%23n)"/></svg>');
+            border: 8px solid #8b4513;
+            border-radius: 8px;
+            padding: 40px;
+            max-width: 650px;
+            color: #4a2f1d;
+            font-family: 'Georgia', serif;
+            font-size: 20px;
+            line-height: 1.6;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 40px rgba(139,69,19,0.2);
+            position: relative;
+        }
+        .parchment-box p {
+            margin-bottom: 15px;
+        }
+        .parchment-box .close-btn {
+            color: #8b4513;
+            top: 15px;
+            right: 20px;
+        }
+        .parchment-box .close-btn:hover {
+            color: #3e2723;
+        }
+        .signature {
+            text-align: right;
+            margin-top: 30px;
+            font-size: 24px;
+            font-style: italic;
+            font-family: 'Georgia', serif;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="loading">Loading your adventure<span class="loading-dots"></span></div>
+    <div id="coinCounter">🪙 <span id="coinsVal">0</span> / 4</div>
+    <div id="hud">
+        <button id="muteBtn">🔊</button>
+        <div id="weatherDisplay">☀️</div>
+    </div>
+    
+    <div id="interactionText">Interact</div>
+    <div id="zoneTitle"></div>
+    <div id="disclaimer">Application created with Gemini AI by @ejruizgarcia, licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.</div>
+
+    <div id="blocker">
+        <div id="instructions">
+            <h1 id="gameTitle" style="font-size: 36px; margin-bottom: 10px;">Craft Islands</h1>
+            <p style="font-size: 18px; line-height: 1.5;">Welcome to the interactive game of the mysterious islands.</p>
+            <p style="font-size: 16px; color: #ccc;">Controls:<br>
+            W, A, S, D to move | Click to interact<br>
+            Hold R to sprint | Space to jump<br>
+            ALT + M = Screenshot | CTRL + M = Mute</p>
         </div>
     </div>
-);
+    <div id="crosshair"></div>
 
-const ConfirmationModal = ({ onConfirm, onCancel, title, message }) => (
-    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 m-4 max-w-md w-full">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">{title}</h2>
-            <p className="text-gray-600 mb-8">{message}</p>
-            <div className="flex justify-end space-x-4">
-                <button onClick={onCancel} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors">
-                    Cancel
-                </button>
-                <button onClick={onConfirm} className="px-6 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors">
-                    Delete
-                </button>
-            </div>
+    <!-- Story Modal -->
+    <div id="storyModal" class="modal-overlay">
+        <div class="parchment-box">
+            <span class="close-btn" onclick="closeStory()">×</span>
+            <p>Welcome to the Craft Islands. In this adventure you will find four islands, and on each island many objects and places. Keep taking notes of everything you see in your notebook. You must visit the places you find and write down the weather, because you will need everything for the final writing task.</p>
+            <p>Finally, you will have to collect the four gold coins to be able to leave. Where are the coins? Guess it, I will give you a hint... you will have to go inside...</p>
+            <div class="signature">Good luck.<br>Captain Ruiz.</div>
         </div>
     </div>
-);
 
-const DisplayActivityPage = ({ activity, onClose }) => {
-    if (!activity) return null;
-    return (
-        <div className="fixed inset-0 bg-gray-900 bg-opacity-95 z-50 flex flex-col p-8" onClick={onClose}>
-             <button onClick={onClose} className="absolute top-6 right-6 text-white bg-black/50 rounded-full p-2 hover:bg-black/80 transition-colors text-3xl z-10">&times;</button>
-             <div className="flex-grow flex items-center justify-center">
-                <div className="w-full max-w-4xl text-center text-white animate-fade-in">
-                    <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight shadow-lg">{activity.title}</h1>
-                    <p className="text-2xl md:text-4xl leading-relaxed">{activity.prompt}</p>
-                </div>
-             </div>
+    <!-- Book Modal -->
+    <div id="bookModal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeBook()">×</span>
+            <h2 id="bookTitle">Irregular Verbs Book</h2>
+            <div class="verb-grid" id="bookGrid"></div>
         </div>
-    )
-};
+    </div>
 
-const NewsModal = ({ onClose }) => (
-    <Modal onClose={onClose}>
-        <div className="pt-8">
-            <h2 className="text-3xl font-bold text-center mb-4 text-gray-800">Welcome to v.01!</h2>
-            <p className="text-center text-gray-600 mb-8">Here's a quick summary of what you can do:</p>
-            <ul className="space-y-4 text-gray-700">
-                <li className="flex items-start gap-4">
-                    <span className="text-xl">🤖</span>
-                    <div>
-                        <h3 className="font-bold">AI-Powered Generation</h3>
-                        <p>Generate 9 unique speaking activities (3 Quick Practices, 3 Mini-Projects, and 3 Projects) based on your chosen course and unit.</p>
-                    </div>
-                </li>
-                 <li className="flex items-start gap-4">
-                    <span className="text-xl">💾</span>
-                    <div>
-                        <h3 className="font-bold">Save & Organize</h3>
-                        <p>Save your favorite activities. They are automatically organized by course and unit in the "My Activities" section.</p>
-                    </div>
-                </li>
-                 <li className="flex items-start gap-4">
-                    <span className="text-xl">🖥️</span>
-                    <div>
-                        <h3 className="font-bold">Projector Mode</h3>
-                        <p>Display any activity in a clean, full-screen "blackboard" view, perfect for showing instructions to your students in class.</p>
-                    </div>
-                </li>
-                 <li className="flex items-start gap-4">
-                    <span className="text-xl">📄</span>
-                    <div>
-                        <h3 className="font-bold">Download as PDF</h3>
-                        <p>Export all activities for a specific unit into a stylish .pdf file for easy printing or sharing.</p>
-                    </div>
-                </li>
-            </ul>
+    <!-- Test Modal -->
+    <div id="testModal" class="modal-overlay">
+        <div class="modal-content" style="background: #eef2f5;">
+            <span class="close-btn" onclick="closeTest()">×</span>
+            <h2>Irregular Verbs Test</h2>
+            <p style="text-align:center; color:#555;">Complete the 3 forms for each verb. You need 80% to pass.</p>
+            <div id="testCardsContainer"></div>
+            <button id="checkTestBtn" class="check-btn" onclick="checkTest()">Check Answers</button>
+            <button id="continueTestBtn" class="check-btn" style="display:none; background:#27ae60;" onclick="finishTest()">Continue</button>
+            <p id="testResult" style="text-align:center; font-weight:bold; margin-top:15px; font-size:18px;"></p>
         </div>
-    </Modal>
-);
+    </div>
 
+    <!-- Congrats Modal -->
+    <div id="congratsModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: #f39c12; font-size: 32px;">🌟 Excellent Work! 🌟</h2>
+            <p style="font-size: 18px; margin: 20px 0;">You have passed the test and unlocked the door.</p>
+            <p style="font-size: 16px; color: #555;">Collect all 4 gold coins to complete your adventure.</p>
+            <button class="check-btn" style="width:auto;" onclick="closeCongrats()">Continue</button>
+        </div>
+    </div>
 
-// --- Main App Components ---
+    <!-- Endgame Modal -->
+    <div id="endgameModal" class="modal-overlay">
+        <div class="modal-content" style="text-align: center;">
+            <h2 style="color: #27ae60; font-size: 36px;">🏆 CONGRATULATIONS! 🏆</h2>
+            <p style="font-size: 18px; margin: 20px 0;">You have mastered the irregular verbs and collected all 4 coins!</p>
+            <p style="font-size: 16px;">Please enter your surname to claim these islands:</p>
+            <input type="text" id="surnameInput" style="padding:10px; font-size:18px; width:200px; margin-bottom:20px; border:2px solid #ccc; border-radius:5px;"><br>
+            <button class="check-btn" style="width:auto; background:#27ae60;" onclick="claimIslands()">Claim Islands</button>
+        </div>
+    </div>
 
-const Header = ({ onNavigate, onShowNews }) => (
-    <header className="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-30">
-        <h1 className="text-xl font-bold text-gray-800">Speaking Activities Generator v.01</h1>
-        <div className="flex items-center space-x-4">
-            <button onClick={onShowNews} className="text-gray-500 hover:text-gray-800">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-            </button>
-            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all">
-                My Activities
-            </button>
-        </div>
-    </header>
-);
+    <!-- Final Diploma Modal -->
+    <div id="diplomaModal" class="modal-overlay">
+        <div class="parchment-box" style="text-align: center;">
+            <p>Congratulations, you have managed to finish the game.</p>
+            <p>As a gift, from this moment on, the islands are renamed:</p>
+            <p><span id="finalIslandsName" style="font-size: 40px; font-weight: bold; color: #8b4513; display: block; margin: 25px 0;"></span></p>
+            <div class="signature">
+                Signed Captain Ruiz, <span id="diplomaDate"></span>
+            </div>
+            <button class="check-btn" style="width:auto; margin-top:40px; background:#8b4513; color:#fdf5e6; border: 2px solid #5a2a0a;" onclick="location.reload()">CLOSE</button>
+        </div>
+    </div>
 
-const Footer = () => (
-    <footer className="text-center text-xs text-gray-500 p-4 mt-8 border-t bg-gray-50">
-        Esta app ha sido desarrollada por Eduardo Ruiz (@ejruizgarcia), 2025, utilizando Gemini y tiene licencia CC BY-NC 4.0.
-    </footer>
-);
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 
-const HomePage = ({ onNavigate }) => (
-    <div className="flex flex-col items-center justify-center min-h-screen space-y-8 p-4 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold text-gray-800">Speaking Activities Generator v.01</h1>
-        <p className="text-xl text-gray-600 max-w-2xl">Your personal assistant to create, generate, and manage speaking activities for your students.</p>
-        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
-            <button onClick={() => onNavigate('create')} className="bg-green-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-green-700 transition-all transform hover:scale-105">
-                Create New Activity
-            </button>
-            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-blue-700 transition-all transform hover:scale-105">
-                My Activities
-            </button>
-        </div>
-    </div>
-);
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
-const CreateSpeakingPage = ({ onNavigate, onSaveSpeaking, onGoToSpeaking }) => {
-    const [selectedCourse, setSelectedCourse] = useState(null);
-    const [selectedUnit, setSelectedUnit] = useState(null);
-    const [generatedActivities, setGeneratedActivities] = useState({ quickPractices: [], miniProjects: [], projects: [] });
-    const [loading, setLoading] = useState(false);
-    const [reloadingType, setReloadingType] = useState(null);
-    const [showGeneratedModal, setShowGeneratedModal] = useState(false);
-
-    const handleRegenerate = async (activityType) => {
-        const countNeeded = 3 - generatedActivities[activityType].length;
-        if (countNeeded <= 0) return;
-
-        setReloadingType(activityType);
-
-        const courseInfo = courseData[selectedCourse];
-        const unitInfo = courseInfo.units[selectedUnit];
-        const existingTitles = generatedActivities[activityType].map(p => p.title).join('", "');
-        const typeDetails = {
-            quickPractices: 'Son actividades orales cortas (5-15 minutos) para parejas o pequeños grupos. Deben ser dinámicas y de práctica directa. SIN componente digital.',
-            miniProjects: 'Son actividades de aproximadamente 1 hora. OBLIGATORIAMENTE deben combinar oralidad con un componente digital sencillo (crear una infografía simple, grabar un audio corto, etc.).',
-            projects: 'Son proyectos de 2-3 clases en grupo. OBLIGATORIAMENTE deben centrarse en crear un "artefacto digital" (vídeo, podcast, presentación) para una presentación oral final.'
+        // Verb Data
+        const VERB_BLOCKS = {
+            1: [
+                {es: "ser/estar", v1: "be", v2: "was/were", v3: "been"},
+                {es: "golpear/vencer", v1: "beat", v2: "beat", v3: "beaten"},
+                {es: "llegar a ser", v1: "become", v2: "became", v3: "become"},
+                {es: "empezar", v1: "begin", v2: "began", v3: "begun"},
+                {es: "morder", v1: "bite", v2: "bit", v3: "bitten"},
+                {es: "soplar", v1: "blow", v2: "blew", v3: "blown"},
+                {es: "romper", v1: "break", v2: "broke", v3: "broken"},
+                {es: "traer", v1: "bring", v2: "brought", v3: "brought"},
+                {es: "construir", v1: "build", v2: "built", v3: "built"},
+                {es: "quemar", v1: "burn", v2: "burnt", v3: "burnt"},
+                {es: "comprar", v1: "buy", v2: "bought", v3: "bought"},
+                {es: "poder", v1: "can", v2: "could", v3: "-"},
+                {es: "atrapar", v1: "catch", v2: "caught", v3: "caught"},
+                {es: "elegir", v1: "choose", v2: "chose", v3: "chosen"},
+                {es: "venir", v1: "come", v2: "came", v3: "come"},
+                {es: "costar", v1: "cost", v2: "cost", v3: "cost"},
+                {es: "cortar", v1: "cut", v2: "cut", v3: "cut"},
+                {es: "hacer", v1: "do", v2: "did", v3: "done"},
+                {es: "dibujar", v1: "draw", v2: "drew", v3: "drawn"},
+                {es: "soñar", v1: "dream", v2: "dreamt", v3: "dreamt"},
+                {es: "beber", v1: "drink", v2: "drank", v3: "drunk"},
+                {es: "conducir", v1: "drive", v2: "drove", v3: "driven"}
+            ],
+            2: [
+                {es: "comer", v1: "eat", v2: "ate", v3: "eaten"},
+                {es: "caer", v1: "fall", v2: "fell", v3: "fallen"},
+                {es: "alimentar", v1: "feed", v2: "fed", v3: "fed"},
+                {es: "sentir", v1: "feel", v2: "felt", v3: "felt"},
+                {es: "luchar", v1: "fight", v2: "fought", v3: "fought"},
+                {es: "encontrar", v1: "find", v2: "found", v3: "found"},
+                {es: "volar", v1: "fly", v2: "flew", v3: "flown"},
+                {es: "olvidar", v1: "forget", v2: "forgot", v3: "forgotten"},
+                {es: "perdonar", v1: "forgive", v2: "forgave", v3: "forgiven"},
+                {es: "congelar", v1: "freeze", v2: "froze", v3: "frozen"},
+                {es: "obtener", v1: "get", v2: "got", v3: "got"},
+                {es: "dar", v1: "give", v2: "gave", v3: "given"},
+                {es: "ir", v1: "go", v2: "went", v3: "gone"},
+                {es: "crecer/cultivar", v1: "grow", v2: "grew", v3: "grown"},
+                {es: "colgar", v1: "hang", v2: "hung", v3: "hung"},
+                {es: "tener/haber", v1: "have", v2: "had", v3: "had"},
+                {es: "oír", v1: "hear", v2: "heard", v3: "heard"},
+                {es: "esconder", v1: "hide", v2: "hid", v3: "hidden"},
+                {es: "golpear", v1: "hit", v2: "hit", v3: "hit"},
+                {es: "sostener", v1: "hold", v2: "held", v3: "held"},
+                {es: "herir/doler", v1: "hurt", v2: "hurt", v3: "hurt"},
+                {es: "guardar", v1: "keep", v2: "kept", v3: "kept"}
+            ],
+            3: [
+                {es: "saber", v1: "know", v2: "knew", v3: "known"},
+                {es: "liderar", v1: "lead", v2: "led", v3: "led"},
+                {es: "aprender", v1: "learn", v2: "learnt", v3: "learnt"},
+                {es: "dejar/irse", v1: "leave", v2: "left", v3: "left"},
+                {es: "prestar", v1: "lend", v2: "lent", v3: "lent"},
+                {es: "permitir", v1: "let", v2: "let", v3: "let"},
+                {es: "mentir/yacer", v1: "lie", v2: "lay", v3: "lain"},
+                {es: "perder", v1: "lose", v2: "lost", v3: "lost"},
+                {es: "hacer/fabricar", v1: "make", v2: "made", v3: "made"},
+                {es: "conocer", v1: "meet", v2: "met", v3: "met"},
+                {es: "pagar", v1: "pay", v2: "paid", v3: "paid"},
+                {es: "poner", v1: "put", v2: "put", v3: "put"},
+                {es: "leer", v1: "read", v2: "read", v3: "read"},
+                {es: "montar", v1: "ride", v2: "rode", v3: "ridden"},
+                {es: "sonar", v1: "ring", v2: "rang", v3: "rung"},
+                {es: "correr", v1: "run", v2: "ran", v3: "run"},
+                {es: "decir", v1: "say", v2: "said", v3: "said"},
+                {es: "ver", v1: "see", v2: "saw", v3: "seen"},
+                {es: "vender", v1: "sell", v2: "sold", v3: "sold"},
+                {es: "enviar", v1: "send", v2: "sent", v3: "sent"},
+                {es: "establecer", v1: "set", v2: "set", v3: "set"},
+                {es: "sacudir", v1: "shake", v2: "shook", v3: "shaken"}
+            ],
+            4: [
+                {es: "brillar", v1: "shine", v2: "shone", v3: "shone"},
+                {es: "mostrar", v1: "show", v2: "showed", v3: "shown"},
+                {es: "cerrar", v1: "shut", v2: "shut", v3: "shut"},
+                {es: "cantar", v1: "sing", v2: "sang", v3: "sung"},
+                {es: "sentarse", v1: "sit", v2: "sat", v3: "sat"},
+                {es: "dormir", v1: "sleep", v2: "slept", v3: "slept"},
+                {es: "hablar", v1: "speak", v2: "spoke", v3: "spoken"},
+                {es: "deletrear", v1: "spell", v2: "spelt", v3: "spelt"},
+                {es: "gastar tiempo", v1: "spend", v2: "spent", v3: "spent"},
+                {es: "estar de pie", v1: "stand", v2: "stood", v3: "stood"},
+                {es: "robar", v1: "steal", v2: "stole", v3: "stolen"},
+                {es: "nadar", v1: "swim", v2: "swam", v3: "swum"},
+                {es: "tomar/llevar", v1: "take", v2: "took", v3: "taken"},
+                {es: "enseñar", v1: "teach", v2: "taught", v3: "taught"},
+                {es: "contar", v1: "tell", v2: "told", v3: "told"},
+                {es: "pensar", v1: "think", v2: "thought", v3: "thought"},
+                {es: "lanzar", v1: "throw", v2: "threw", v3: "thrown"},
+                {es: "entender", v1: "understand", v2: "understood", v3: "understood"},
+                {es: "despertar", v1: "wake", v2: "woke", v3: "woken"},
+                {es: "llevar puesto", v1: "wear", v2: "wore", v3: "worn"},
+                {es: "ganar", v1: "win", v2: "won", v3: "won"},
+                {es: "escribir", v1: "write", v2: "wrote", v3: "written"}
+            ]
         };
 
-        const prompt = `
-            Genera EXACTAMENTE ${countNeeded} nuevas propuestas de actividad de speaking del tipo "${activityType}" para un estudiante de ${courseInfo.level}, basadas en el tema de la unidad "${unitInfo.title}".
-            Descripción del tipo de actividad: ${typeDetails[activityType]}
-            Las actividades deben integrar esta gramática: ${unitInfo.grammar.join(', ')}.
-            Y este vocabulario: ${unitInfo.vocabulary.join(', ')}.
-            Las propuestas DEBEN ser diferentes de los siguientes títulos existentes: "${existingTitles}".
-            Cada propuesta debe incluir un "title" y un "prompt" (instrucciones claras y concisas para el alumno, de unas 20-25 palabras).
-            CRÍTICO: Responde ÚNICAMENTE con un array JSON válido de objetos, así: [{"title": "...", "prompt": "..."}, ...]. No añadas ningún otro texto.
-        `;
+        let camera, scene, renderer, controls;
+        let blocksMap = new Map(); 
+        let instancedMeshes = {}; 
+        let dirLight, ambientLight;
 
-        try {
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { 
-                contents: chatHistory,
-                generationConfig: { responseMimeType: "application/json" }
-            };
-            const apiKey = ""; // The API key will be automatically provided by the environment.
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                const text = result.candidates[0].content.parts[0].text;
-                const newProposals = JSON.parse(text);
-                const newProposalsWithIds = newProposals.map(p => ({ ...p, id: Math.random(), status: 'new' }));
-                setGeneratedActivities(prev => ({
-                    ...prev,
-                    [activityType]: [...prev[activityType], ...newProposalsWithIds]
-                }));
-            } else {
-                throw new Error("Invalid API response structure");
-            }
-        } catch (error) {
-            console.error("Error re-generating proposals:", error);
-            // Optionally, show an error message to the user
-        } finally {
-            setReloadingType(null);
-        }
-    };
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+        let isRunning = false, canJump = false, wasSwimming = false;
 
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
 
-    const handleGenerate = async () => {
-        if (!selectedCourse || !selectedUnit) return;
-        setLoading(true);
-        setGeneratedActivities({ quickPractices: [], miniProjects: [], projects: [] });
+        const raycaster = new THREE.Raycaster();
+        const interactables = [];
+        let coins = 0;
+        let activeTestZone = null;
+        let activeTestVerbs = [];
+        let isUIOpen = false;
+        let isFirstStart = true;
 
-        const courseInfo = courseData[selectedCourse];
-        const unitInfo = courseInfo.units[selectedUnit];
-        
-        const prompt = `
-            Genera propuestas de actividades de speaking para un estudiante de ${courseInfo.level}, basadas en el tema de la unidad "${unitInfo.title}".
-            Las actividades deben integrar esta gramática: ${unitInfo.grammar.join(', ')}.
-            Y este vocabulario: ${unitInfo.vocabulary.join(', ')}.
+        const zones = {
+            1: { name: "Hut", center: new THREE.Vector3(335, 10, 135), radius: 4.5, door: null, locked: false, completed: false, inside: false, titleText: "Welcome to the shelter of the mountain island" },
+            2: { name: "Shipwreck", center: new THREE.Vector3(175, 4, 108), radius: 3.5, door: null, locked: false, completed: false, inside: false, titleText: "Welcome to the shipwreck of the volcano island" },
+            3: { name: "Temple", center: new THREE.Vector3(100, 24, 350), radius: 6.5, door: null, locked: false, completed: false, inside: false, titleText: "Welcome to the Hindu temple of the jungle island" },
+            4: { name: "Pyramid", center: new THREE.Vector3(300, 5, 300), radius: 13, door: null, locked: false, completed: false, inside: false, titleText: "Welcome to the pyramid of the desert island" }
+        };
 
-            Debes crear tres tipos de actividades con especificaciones MUY CLARAS:
-            1.  **Quick Activities**: EXACTAMENTE 3 propuestas. Son actividades orales cortas (5-15 minutos) para parejas o pequeños grupos. Deben ser dinámicas y de práctica directa. SIN componente digital.
+        let timeOfDay = 60; 
+        let currentWeather = 'SUNNY';
+        let weatherTimer = 10; 
+        let globalUniforms = { uTime: { value: 0 }, uWind: { value: 0 }, uSnow: { value: 0 }, uRain: { value: 0 } };
+        let targetWind = 0, targetSnow = 0, targetRain = 0, targetFogDensity = 0.002;
+        let lightningFlash = 0;
 
-            2.  **Mini-Projects**: EXACTAMENTE 3 propuestas. Son actividades de aproximadamente 1 hora. OBLIGATORIAMENTE deben combinar oralidad con un componente digital sencillo (crear una infografía simple, grabar un audio corto, etc.).
+        const weatherTypes = ['SUNNY', 'CLOUDY', 'RAINY', 'STORMY', 'WINDY', 'FOGGY', 'SNOWY'];
 
-            3.  **Projects**: EXACTAMENTE 3 propuestas. Son proyectos de 2-3 clases en grupo. OBLIGATORIAMENTE deben centrarse en crear un "artefacto digital" (vídeo, podcast, presentación) para una presentación oral final.
+        const TYPES = {
+            AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SNOW: 4, SAND: 5, LAVA: 6, WATER: 7, 
+            WOOD: 8, LEAVES: 9, CACTUS: 10, FLOWER: 11, STEM: 12, TORCH: 13, PLANK: 14, GOLD: 15
+        };
 
-            Cada propuesta debe incluir un "title" y un "prompt" (instrucciones claras y concisas para el alumno, de unas 20-25 palabras).
+        const INVISIBLE_BARRIER = 99; 
 
-            CRÍTICO: Responde ÚNICAMENTE con un objeto JSON válido, con la siguiente estructura exacta:
-            {
-              "quickPractices": [{"title": "...", "prompt": "..."}, ...],
-              "miniProjects": [{"title": "...", "prompt": "..."}, ...],
-              "projects": [{"title": "...", "prompt": "..."}, ...]
-            }
-            No añadas texto o explicaciones fuera del JSON. El JSON debe ser perfecto y contener 3 propuestas en cada categoría.
-        `;
+        function createTexture(hex, type) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            const color = new THREE.Color(hex);
+            const hsl = {};
+            color.getHSL(hsl);
 
-        try {
-            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-            const payload = { 
-                contents: chatHistory,
-                generationConfig: { responseMimeType: "application/json" }
-            };
-            const apiKey = ""; // The API key will be automatically provided by the environment.
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-            
-            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                let text = result.candidates[0].content.parts[0].text;
-                try {
-                    const parsedJson = JSON.parse(text);
-                    const activitiesWithIds = {
-                        quickPractices: (parsedJson.quickPractices || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
-                        miniProjects: (parsedJson.miniProjects || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
-                        projects: (parsedJson.projects || []).map(p => ({ ...p, id: Math.random(), status: 'new' })),
-                    };
-                    setGeneratedActivities(activitiesWithIds);
-                    setShowGeneratedModal(true);
-                } catch (parseError) {
-                    console.error("Error parsing JSON:", parseError, "Original text:", text);
-                    setShowGeneratedModal(true);
-                    setGeneratedActivities({ error: "Sorry, there was an error processing the AI's response. The format was invalid." });
-                }
-            } else {
-                console.error("Error: Unexpected API response structure", result);
-                setShowGeneratedModal(true);
-                setGeneratedActivities({ error: "Sorry, there was an error generating the proposals. Please try again." });
-            }
-        } catch (error) {
-            console.error("Error generating proposals:", error);
-            setShowGeneratedModal(true);
-            setGeneratedActivities({ error: "An error occurred while communicating with the AI. Please check your connection and API key." });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSave = async (activityToSave, activityType) => {
-        setGeneratedActivities(prev => {
-            const newState = JSON.parse(JSON.stringify(prev));
-            const itemIndex = newState[activityType].findIndex(p => p.id === activityToSave.id);
-            if (itemIndex > -1) {
-                newState[activityType][itemIndex].status = 'saving';
-            }
-            return newState;
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const newSpeaking = {
-            id: Date.now(),
-            course: selectedCourse,
-            unit: selectedUnit,
-            title: activityToSave.title,
-            prompt: activityToSave.prompt,
-            type: activityType
-        };
-
-        onSaveSpeaking(newSpeaking);
-        
-        setGeneratedActivities(prev => {
-            const newState = JSON.parse(JSON.stringify(prev));
-            const itemIndex = newState[activityType].findIndex(p => p.id === activityToSave.id);
-            if (itemIndex > -1) {
-                newState[activityType][itemIndex].status = 'saved';
-                newState[activityType][itemIndex].persistentId = newSpeaking.id;
-            }
-            return newState;
-        });
-    };
-
-    const handleDelete = (id, activityType) => {
-        const element = document.getElementById(`proposal-card-${id}`);
-        if (element) {
-            const direction = Math.random() > 0.5 ? 'fall-left-animation' : 'fall-right-animation';
-            element.classList.add(direction);
-            setTimeout(() => {
-                setGeneratedActivities(prev => {
-                    const newTypedActivities = prev[activityType].filter(p => p.id !== id);
-                    const newActivities = { ...prev, [activityType]: newTypedActivities };
-                    
-                    const totalActivities = (newActivities.quickPractices?.length || 0) + (newActivities.miniProjects?.length || 0) + (newActivities.projects?.length || 0);
-                    if (totalActivities === 0) {
-                        setShowGeneratedModal(false);
+            for (let x = 0; x < 16; x++) {
+                for (let y = 0; y < 16; y++) {
+                    let l = hsl.l;
+                    if (type === 'wood') {
+                        l += (Math.random() - 0.5) * 0.1;
+                        if (x % 4 === 0 || x % 5 === 0) l -= 0.15; 
+                    } else if (type === 'plank') {
+                        l += (Math.random() - 0.5) * 0.05;
+                        if (y % 4 === 0 || x % 16 === 0) l -= 0.15; 
+                    } else if (type === 'stone') {
+                        l += (Math.random() - 0.5) * 0.15;
+                        if (Math.random() < 0.05) l -= 0.25; 
+                    } else if (type === 'leaves') {
+                        l += (Math.random() - 0.5) * 0.2;
+                    } else if (type === 'lava') {
+                        l = (Math.random() > 0.5) ? 0.5 : 0.6;
+                        color.setHex((Math.random() > 0.8) ? 0xffaa00 : 0xff4500);
+                        color.getHSL(hsl);
+                    } else {
+                        l += (Math.random() - 0.5) * 0.1;
                     }
-                    return newActivities;
-                });
-            }, 700);
-        }
-    };
-
-    const unitInfo = selectedCourse && selectedUnit ? courseData[selectedCourse].units[selectedUnit] : null;
-
-    const ProposalCard = ({ p, activityType, bgColor, titleColor }) => (
-         <div key={p.id} id={`proposal-card-${p.id}`} className={`p-5 rounded-2xl border-2 shadow-lg flex flex-col transition-all ${p.status === 'saved' ? 'border-green-500 bg-green-50' : `border-transparent ${bgColor}`}`}>
-            <h3 className={`text-lg font-bold ${titleColor} mb-2`}>{p.title}</h3>
-            <p className="text-gray-700 flex-grow mb-4 text-sm whitespace-pre-line">{p.prompt}</p>
-            <div className="flex items-center justify-center space-x-3 mt-auto pt-3 h-10">
-                {p.status === 'new' && <>
-                    <button onClick={() => handleSave(p, activityType)} className="flex-1 bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">Save</button>
-                    <button onClick={() => handleDelete(p.id, activityType)} className="flex-1 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Discard</button>
-                </>}
-                {p.status === 'saving' && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>}
-                {p.status === 'saved' && <button onClick={() => onGoToSpeaking(p.persistentId)} className="text-green-600 font-bold flex items-center hover:underline">✓ Saved! Go to activity →</button>}
-            </div>
-        </div>
-    );
-
-    return (
-        <div className="p-4 md:p-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-6">Create a New Speaking Activity</h1>
-
-            <div className="mb-6 space-y-4">
-                <h2 className="text-2xl font-semibold text-gray-700 mb-3">Step 1: Select a Course</h2>
-                {!selectedCourse ? (
-                    Object.keys(courseData).map(courseId => (
-                        <button key={courseId} onClick={() => setSelectedCourse(courseId)}
-                            className={`w-full p-6 rounded-lg font-bold text-2xl text-white transition-all shadow-lg transform hover:scale-[1.02] ${courseCardColors[courseId]}`}>
-                            {courseId}º ESO
-                        </button>
-                    ))
-                ) : (
-                    <div className="animate-fade-in">
-                        <div className={`w-full p-6 rounded-lg font-bold text-2xl text-white shadow-lg ${courseCardColors[selectedCourse]}`}>
-                            {selectedCourse}º ESO
-                        </div>
-                        <button onClick={() => { setSelectedCourse(null); setSelectedUnit(null); }} className="mt-2 text-sm text-blue-600 hover:underline">Change course</button>
-                    </div>
-                )}
-            </div>
-
-            {selectedCourse && (
-                <div className="mb-6 animate-fade-in">
-                    <h2 className="text-2xl font-semibold text-gray-700 mb-3">Step 2: Select a Unit</h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                        {Object.keys(courseData[selectedCourse].units).map(unitId => (
-                            <button key={unitId} onClick={() => setSelectedUnit(unitId)}
-                                className={`p-4 rounded-lg font-semibold transition-all text-center flex flex-col justify-center items-center h-24 ${unitButtonColors[selectedCourse][parseInt(unitId) - 1]} ${selectedUnit === unitId ? 'ring-4 ring-offset-2 ring-green-500' : ''}`}>
-                                <span className="font-bold">Unit {unitId}</span>
-                                <span className="text-xs mt-1">{courseData[selectedCourse].units[unitId].title}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {unitInfo && (
-                <div className="mt-8 p-6 bg-white rounded-xl shadow-md animate-fade-in">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-                        <div>
-                            <h3 className="text-2xl font-bold text-gray-800">{unitInfo.title}</h3>
-                            <p className="text-gray-500">{courseData[selectedCourse].level}</p>
-                        </div>
-                        <button onClick={handleGenerate} disabled={loading} className="bg-purple-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-purple-700 transition-all transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                            {loading ? (
-                                <>
-                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span>Generating...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-xl">✨</span>
-                                    <span>Generate Activities (AI)</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-6 text-sm">
-                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].grammar}`}>
-                            <h4 className="font-bold text-gray-700 mb-2">Grammar</h4>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.grammar.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                        </div>
-                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].vocabulary}`}>
-                            <h4 className="font-bold text-gray-700 mb-2">Vocabulary</h4>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.vocabulary.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                        </div>
-                        <div className={`p-4 rounded-lg ${contentBoxStyles[selectedCourse].functions}`}>
-                            <h4 className="font-bold text-gray-700 mb-2">Language Functions</h4>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">{unitInfo.functions.map((item, i) => <li key={i}>{item}</li>)}</ul>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {showGeneratedModal && (
-                <Modal onClose={() => setShowGeneratedModal(false)} wide={true}>
-                    <div className="pt-8">
-                        <h2 className="text-3xl font-bold text-center mb-1 text-gray-800">Generated Proposals</h2>
-                        <p className="text-center text-gray-500 mb-8">Here are 9 activity ideas for you. Choose the ones you like!</p>
-
-                        {generatedActivities.error ? (
-                            <div className="text-center p-8 bg-red-100 border-2 border-red-400 text-red-800 rounded-lg">
-                                <h3 className="font-bold text-xl mb-2">Oops! Something went wrong.</h3>
-                                <p>{generatedActivities.error}</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-8">
-                                <div>
-                                    <div className="flex justify-between items-center mb-4 border-b-2 border-blue-200 pb-2">
-                                        <h3 className="text-2xl font-bold text-blue-600">🗣️ Quick Activities</h3>
-                                        {generatedActivities.quickPractices?.length < 3 && (
-                                            <button onClick={() => handleRegenerate('quickPractices')} disabled={reloadingType} className="bg-blue-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-blue-600 disabled:bg-gray-400 flex items-center justify-center w-32">
-                                                {reloadingType === 'quickPractices' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="grid md:grid-cols-3 gap-6">
-                                        {generatedActivities.quickPractices?.map(p => <ProposalCard key={p.id} p={p} activityType="quickPractices" bgColor="bg-blue-50" titleColor="text-blue-800" />)}
-                                    </div>
-                                </div>
-                                 <div>
-                                    <div className="flex justify-between items-center mb-4 border-b-2 border-yellow-200 pb-2">
-                                        <h3 className="text-2xl font-bold text-yellow-600">📝 Mini-Projects</h3>
-                                        {generatedActivities.miniProjects?.length < 3 && (
-                                            <button onClick={() => handleRegenerate('miniProjects')} disabled={reloadingType} className="bg-yellow-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-yellow-600 disabled:bg-gray-400 flex items-center justify-center w-32">
-                                                {reloadingType === 'miniProjects' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="grid md:grid-cols-3 gap-6">
-                                        {generatedActivities.miniProjects?.map(p => <ProposalCard key={p.id} p={p} activityType="miniProjects" bgColor="bg-yellow-50" titleColor="text-yellow-800" />)}
-                                    </div>
-                                </div>
-                                 <div>
-                                    <div className="flex justify-between items-center mb-4 border-b-2 border-green-200 pb-2">
-                                        <h3 className="text-2xl font-bold text-green-600">🚀 Projects</h3>
-                                        {generatedActivities.projects?.length < 3 && (
-                                            <button onClick={() => handleRegenerate('projects')} disabled={reloadingType} className="bg-green-500 text-white font-semibold py-1 px-3 rounded-lg text-sm hover:bg-green-600 disabled:bg-gray-400 flex items-center justify-center w-32">
-                                                {reloadingType === 'projects' ? <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> : 'Generate More'}
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="grid md:grid-cols-3 gap-6">
-                                        {generatedActivities.projects?.map(p => <ProposalCard key={p.id} p={p} activityType="projects" bgColor="bg-green-50" titleColor="text-green-800" />)}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                         <div className="mt-8 flex justify-end">
-                            <button onClick={() => onNavigate('mySpeakings')} className="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-all">
-                                Go to My Activities
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-        </div>
-    );
-};
-
-const EditSpeakingForm = ({ speaking, onSave, onCancel }) => {
-    const [title, setTitle] = useState(speaking.title);
-    const [prompt, setPrompt] = useState(speaking.prompt);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        onSave(speaking.id, { ...speaking, title, prompt });
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Edit Speaking Activity</h2>
-            <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700">Title</label>
-                <input type="text" id="title" value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"/>
-            </div>
-            <div>
-                <label htmlFor="prompt" className="block text-sm font-medium text-gray-700">Prompt</label>
-                <textarea id="prompt" value={prompt} onChange={e => setPrompt(e.target.value)} rows="4" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
-            </div>
-            <div className="flex justify-end space-x-3">
-                <button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
-                <button type="submit" className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save Changes</button>
-            </div>
-        </form>
-    );
-};
-
-const MySpeakingsPage = ({ speakings, onUpdateSpeaking, onDeleteSpeaking, scrollToSpeakingId, onScrollComplete, onNavigate, onDisplayActivity, isPdfLibReady }) => {
-    const [editingSpeaking, setEditingSpeaking] = useState(null);
-    const [activityToDelete, setActivityToDelete] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [activeFilter, setActiveFilter] = useState('all');
-    
-    const activityCardStyles = {
-        quickPractices: {
-            tag: 'bg-blue-600 text-white',
-            card: 'bg-blue-50'
-        },
-        miniProjects: {
-            tag: 'bg-yellow-500 text-white',
-            card: 'bg-yellow-50'
-        },
-        projects: {
-            tag: 'bg-green-600 text-white',
-            card: 'bg-green-50'
-        },
-        default: {
-            tag: 'bg-gray-500 text-white',
-            card: 'bg-gray-50'
+                    ctx.fillStyle = new THREE.Color().setHSL(hsl.h, hsl.s, l).getStyle();
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
         }
-    };
 
-    const typeOrder = {
-        quickPractices: 1,
-        miniProjects: 2,
-        projects: 3,
-    };
-
-    const formatTypeName = (type) => {
-        if (!type) return 'Activity';
-        return type.replace(/([A-Z])/g, ' $1').replace('Practices', 'Practice').replace('s', '');
-    };
-
-    const filteredSpeakings = useMemo(() => {
-        let filtered = speakings;
-        if (activeFilter !== 'all') {
-            filtered = filtered.filter(w => w.course === activeFilter);
-        }
-        if (searchTerm) {
-            filtered = filtered.filter(w => 
-                w.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                w.prompt.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-        return filtered.sort((a, b) => b.id - a.id);
-    }, [speakings, searchTerm, activeFilter]);
-
-    const speakingsByCourseAndUnit = useMemo(() => {
-        return filteredSpeakings.reduce((acc, speaking) => {
-            const course = speaking.course || 'Uncategorized';
-            const unit = speaking.unit || 'Uncategorized';
-            if (!acc[course]) acc[course] = {};
-            if (!acc[course][unit]) acc[course][unit] = [];
-            acc[course][unit].push(speaking);
-            return acc;
-        }, {});
-    }, [filteredSpeakings]);
-
-    useEffect(() => {
-        if (scrollToSpeakingId) {
-            const element = document.getElementById(`speaking-${scrollToSpeakingId}`);
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                element.classList.add('flash-animation');
-                setTimeout(() => {
-                    element.classList.remove('flash-animation');
-                    onScrollComplete();
-                }, 1500);
-            } else {
-                onScrollComplete();
-            }
-        }
-    }, [scrollToSpeakingId, speakings, onScrollComplete]);
-
-    const handleUpdate = (id, updatedData) => {
-        onUpdateSpeaking(id, updatedData);
-        setEditingSpeaking(null);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (activityToDelete) {
-            onDeleteSpeaking(activityToDelete);
-            setActivityToDelete(null);
+        function createGrassSide() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 16; canvas.height = 16;
+            const ctx = canvas.getContext('2d');
+            for (let x = 0; x < 16; x++) {
+                for (let y = 0; y < 16; y++) {
+                    let isGrass = y < 4 || (y < 7 && Math.random() > 0.5);
+                    let c = new THREE.Color(isGrass ? 0x478c2e : 0x5e4026);
+                    let hsl = {};
+                    c.getHSL(hsl);
+                    hsl.l += (Math.random() - 0.5) * 0.1;
+                    ctx.fillStyle = c.setHSL(hsl.h, hsl.s, hsl.l).getStyle();
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
         }
-    };
 
-    const handleDownloadUnitPDF = (courseId, unitId, activities) => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
+        const texDirt = createTexture(0x5e4026, 'dirt');
+        const texStone = createTexture(0x777777, 'stone');
+        const texSnow = createTexture(0xffffff, 'snow');
+        const texSand = createTexture(0xd2b48c, 'sand');
+        const texWood = createTexture(0x5c4033, 'wood');
+        const texLeaves = createTexture(0x228b22, 'leaves');
+        const texCactus = createTexture(0x2e8b57, 'cactus');
+        const texPlank = createTexture(0x8b5a2b, 'plank');
+        const texGold = createTexture(0xffd700, 'gold');
+        const texLava = createTexture(0xff4500, 'lava');
+        const texWater = createTexture(0x1ca3ec, 'water');
 
-        const courseInfo = courseData[courseId];
-        const unitInfo = courseInfo.units[unitId];
-        
-        const pageMargin = 14;
-        const contentWidth = doc.internal.pageSize.getWidth() - (pageMargin * 2);
-        const colors = {
-            quick: [59, 130, 246],
-            mini: [245, 158, 11],
-            project: [16, 185, 129],
-            text: [31, 41, 55],
-            lightText: [107, 114, 128]
+        function patchMaterial(material, isLeaves, isGround) {
+            material.onBeforeCompile = function (shader) {
+                shader.uniforms.uTime = globalUniforms.uTime;
+                shader.uniforms.uWind = globalUniforms.uWind;
+                shader.uniforms.uSnow = globalUniforms.uSnow;
+                
+                let vertexPrefix = 'uniform float uTime;\nuniform float uWind;\nvarying vec3 vWorldNormal;\nvarying vec3 vWorldPos;\n';
+                let fragmentPrefix = 'uniform float uSnow;\nvarying vec3 vWorldNormal;\nvarying vec3 vWorldPos;\n';
+                
+                shader.vertexShader = vertexPrefix + shader.vertexShader;
+                shader.vertexShader = shader.vertexShader.replace(
+                    '#include <worldpos_vertex>',
+                    `#include <worldpos_vertex>
+                     #ifndef USE_INSTANCING
+                     vWorldNormal = normalize((modelMatrix * vec4(objectNormal, 0.0)).xyz);
+                     vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+                     #else
+                     vWorldNormal = normalize((instanceMatrix * vec4(objectNormal, 0.0)).xyz);
+                     vWorldPos = (instanceMatrix * vec4(position, 1.0)).xyz;
+                     #endif`
+                );
+                
+                if (isLeaves) {
+                    shader.vertexShader = shader.vertexShader.replace(
+                        '#include <begin_vertex>',
+                        `#include <begin_vertex>
+                         #ifdef USE_INSTANCING
+                         float randomOffset = fract(sin(instanceMatrix[3][0] * 12.9898 + instanceMatrix[3][2] * 78.233) * 43758.5453);
+                         float sway = sin(uTime * (3.0 + randomOffset) + randomOffset * 10.0) * uWind * 0.2;
+                         float swayZ = cos(uTime * (2.5 + randomOffset) + randomOffset * 10.0) * uWind * 0.15;
+                         transformed.x += sway;
+                         transformed.z += swayZ;
+                         #endif`
+                    );
+                }
+                
+                shader.fragmentShader = fragmentPrefix + shader.fragmentShader;
+                
+                if (isGround) {
+                    shader.fragmentShader = shader.fragmentShader.replace(
+                        '#include <dithering_fragment>',
+                        `#include <dithering_fragment>
+                         float indoor = 0.0;
+                         if (vWorldPos.x > 328.0 && vWorldPos.x < 342.0 && vWorldPos.z > 128.0 && vWorldPos.z < 142.0 && vWorldPos.y < 20.0) indoor = 1.0;
+                         if (vWorldPos.x > 171.0 && vWorldPos.x < 179.0 && vWorldPos.z > 103.0 && vWorldPos.z < 112.0 && vWorldPos.y < 7.0) indoor = 1.0;
+                         if (length(vWorldPos.xz - vec2(100.0, 350.0)) < 8.5 && vWorldPos.y >= 24.0 && vWorldPos.y < 64.0) indoor = 1.0;
+                         if (vWorldPos.x > 284.0 && vWorldPos.x < 316.0 && vWorldPos.z > 284.0 && vWorldPos.z < 316.0 && vWorldPos.y < 22.0) indoor = 1.0;
+                         float snowMix = uSnow * smoothstep(0.5, 0.9, vWorldNormal.y) * (1.0 - indoor);
+                         gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.95, 0.95, 0.98), snowMix);`
+                    );
+                }
+                material.userData.shader = shader;
+            };
+        }
+
+        const waterMaterial = new THREE.MeshPhysicalMaterial({ map: texWater, transparent: true, opacity: 0.7 });
+        waterMaterial.onBeforeCompile = function (shader) {
+            shader.uniforms.uTime = globalUniforms.uTime;
+            shader.uniforms.uRain = globalUniforms.uRain;
+            waterMaterial.userData.shader = shader;
+            shader.vertexShader = 'uniform float uTime;\nuniform float uRain;\n' + shader.vertexShader;
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `vec3 transformed = vec3( position );
+                 #ifdef USE_INSTANCING
+                 float wave = sin(uTime * 2.0 + instanceMatrix[3][0] * 0.5 + instanceMatrix[3][2] * 0.5) * 0.15;
+                 float ripple = sin(instanceMatrix[3][0] * 10.0 + instanceMatrix[3][2] * 10.0 - uTime * 15.0) * uRain * 0.05;
+                 transformed.y += wave + ripple;
+                 #endif`
+            );
         };
 
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(22);
-        doc.setTextColor(...colors.text);
-        doc.text("Speaking Activities", pageMargin, 20);
+        const matGrass = [
+            new THREE.MeshLambertMaterial({ map: createGrassSide() }), 
+            new THREE.MeshLambertMaterial({ map: createGrassSide() }), 
+            new THREE.MeshLambertMaterial({ map: createTexture(0x478c2e, 'grass') }), 
+            new THREE.MeshLambertMaterial({ map: texDirt }), 
+            new THREE.MeshLambertMaterial({ map: createGrassSide() }), 
+            new THREE.MeshLambertMaterial({ map: createGrassSide() })  
+        ];
+        matGrass.forEach(m => patchMaterial(m, false, true));
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(14);
-        doc.setTextColor(...colors.lightText);
-        doc.text(`${courseId}º ESO | Unit ${unitId}: ${unitInfo.title}`, pageMargin, 28);
-        
-        let currentY = 45;
+        const matDirt = new THREE.MeshLambertMaterial({ map: texDirt }); patchMaterial(matDirt, false, true);
+        const matStone = new THREE.MeshLambertMaterial({ map: texStone }); patchMaterial(matStone, false, true);
+        const matSnow = new THREE.MeshLambertMaterial({ map: texSnow }); patchMaterial(matSnow, false, true);
+        const matSand = new THREE.MeshLambertMaterial({ map: texSand }); patchMaterial(matSand, false, true);
+        const matWood = new THREE.MeshLambertMaterial({ map: texWood }); patchMaterial(matWood, false, true);
+        const matLeaves = new THREE.MeshLambertMaterial({ map: texLeaves, transparent: true, opacity: 0.95 }); patchMaterial(matLeaves, true, true);
+        const matPlank = new THREE.MeshLambertMaterial({ map: texPlank }); patchMaterial(matPlank, false, true);
 
-        const addPageIfNeeded = (spaceNeeded) => {
-            if (currentY + spaceNeeded > doc.internal.pageSize.getHeight() - pageMargin) {
-                doc.addPage();
-                currentY = 20;
+        const MATERIALS = {
+            [TYPES.GRASS]: matGrass,
+            [TYPES.DIRT]: matDirt,
+            [TYPES.STONE]: matStone,
+            [TYPES.SNOW]: matSnow,
+            [TYPES.SAND]: matSand,
+            [TYPES.LAVA]: new THREE.MeshBasicMaterial({ map: texLava }), 
+            [TYPES.WATER]: waterMaterial,
+            [TYPES.WOOD]: matWood,
+            [TYPES.LEAVES]: matLeaves,
+            [TYPES.CACTUS]: new THREE.MeshLambertMaterial({ map: texCactus }),
+            [TYPES.FLOWER]: new THREE.MeshLambertMaterial({ color: 0xffffff }), 
+            [TYPES.STEM]: new THREE.MeshLambertMaterial({ color: 0x32cd32 }),
+            [TYPES.TORCH]: new THREE.MeshBasicMaterial({ color: 0xffcc00 }),
+            [TYPES.PLANK]: matPlank,
+            [TYPES.GOLD]: new THREE.MeshLambertMaterial({ map: texGold })
+        };
+
+        const blockData = {};
+        for(let key in TYPES) blockData[TYPES[key]] = [];
+
+        const waterSet = new Set();
+        let volcanoParticles, fireParticles, cloudParticles, rainParticles, snowParticles, lightningMesh;
+
+        const MAX_SPLASH_PARTICLES = 600;
+        let splashParticles, splashPositions;
+        let splashVelocities = [], splashLifetimes = [];
+
+        let audioCtx;
+        let rainGain, windGain;
+        let isMuted = false;
+
+        window.closeStory = function() {
+            document.getElementById('storyModal').style.display = 'none';
+            isUIOpen = false;
+            controls.lock();
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        };
+
+        window.closeBook = function() {
+            document.getElementById('bookModal').style.display = 'none';
+            isUIOpen = false;
+            controls.lock();
+        };
+        window.closeTest = function() {
+            document.getElementById('testModal').style.display = 'none';
+            if (document.getElementById('congratsModal').style.display !== 'flex') {
+                isUIOpen = false;
+                controls.lock();
             }
         };
-        
-        const activityOrder = ['quickPractices', 'miniProjects', 'projects'];
-        const sectionDetails = {
-            quickPractices: { title: 'Quick Activities', color: colors.quick },
-            miniProjects: { title: 'Mini-Projects', color: colors.mini },
-            projects: { title: 'Projects', color: colors.project }
+        window.closeCongrats = function() {
+            document.getElementById('congratsModal').style.display = 'none';
+            if(coins === 4) {
+                document.getElementById('endgameModal').style.display = 'flex';
+                document.exitPointerLock();
+            } else {
+                isUIOpen = false;
+                controls.lock();
+            }
+        };
+        window.claimIslands = function() {
+            const surname = document.getElementById('surnameInput').value.trim();
+            if(surname) {
+                document.getElementById('endgameModal').style.display = 'none';
+                document.getElementById('gameTitle').innerText = `${surname} Islands`;
+                document.getElementById('coinCounter').innerText = `🏆 Master of ${surname} Islands`;
+                
+                document.getElementById('finalIslandsName').innerText = `${surname.toUpperCase()} ISLANDS`;
+                const today = new Date();
+                const dateStr = today.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                document.getElementById('diplomaDate').innerText = dateStr;
+                
+                document.getElementById('diplomaModal').style.display = 'flex';
+            }
         };
 
-        activityOrder.forEach(type => {
-            const relevantActivities = activities.filter(act => act.type === type).sort((a,b) => a.id - b.id);
-            if (relevantActivities.length > 0) {
-                addPageIfNeeded(20);
-                doc.setFillColor(...sectionDetails[type].color);
-                doc.rect(pageMargin, currentY - 6, contentWidth, 10, 'F');
-                doc.setFontSize(14);
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(255, 255, 255);
-                doc.text(sectionDetails[type].title, pageMargin + 4, currentY + 1);
-                currentY += 15;
+        window.finishTest = function() {
+            document.getElementById('testModal').style.display = 'none';
+            const zone = zones[activeTestZone];
+            zone.completed = true;
+            zone.locked = false;
+            zone.door.targetRot = zone.door.openRot;
+            coins++;
+            document.getElementById('coinsVal').innerText = coins;
+            document.getElementById('congratsModal').style.display = 'flex';
+        };
 
-                relevantActivities.forEach(act => {
-                    doc.setFontSize(12);
-                    doc.setFont("helvetica", "bold");
-                    doc.setTextColor(...colors.text);
+        window.checkTest = function() {
+            let correctCount = 0;
+            const matchInput = (inputVal, targetVal) => {
+                const val = inputVal.toLowerCase().trim();
+                if(targetVal.includes('/')) {
+                    const parts = targetVal.split('/');
+                    return val === targetVal || parts.includes(val);
+                }
+                return val === targetVal || (targetVal === '-' && val === '');
+            };
+
+            for(let i=0; i<10; i++) {
+                const verb = activeTestVerbs[i];
+                const card = document.getElementById(`fc-${i}`);
+                if(card.classList.contains('correct')) {
+                    correctCount++;
+                    continue;
+                }
+
+                const i1 = document.getElementById(`v1-${i}`).value;
+                const i2 = document.getElementById(`v2-${i}`).value;
+                const i3 = document.getElementById(`v3-${i}`).value;
+
+                const r1 = matchInput(i1, verb.v1);
+                const r2 = matchInput(i2, verb.v2);
+                const r3 = matchInput(i3, verb.v3);
+
+                document.getElementById(`e1-${i}`).innerText = r1 ? "✅" : "❌";
+                document.getElementById(`e2-${i}`).innerText = r2 ? "✅" : "❌";
+                document.getElementById(`e3-${i}`).innerText = r3 ? "✅" : "❌";
+
+                if(r1 && r2 && r3) {
+                    card.classList.add('correct');
+                    correctCount++;
+                }
+            }
+
+            const resP = document.getElementById('testResult');
+            if(correctCount >= 8) {
+                resP.style.color = 'green';
+                resP.innerText = `Test Passed! ${correctCount}/10 correct.`;
+                document.getElementById('checkTestBtn').style.display = 'none';
+                document.getElementById('continueTestBtn').style.display = 'block';
+            } else {
+                resP.style.color = 'red';
+                resP.innerText = `You need 8/10 to pass. Score: ${correctCount}/10. Fix your mistakes and try again!`;
+            }
+        };
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('muteBtn').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        init();
+
+        function init() {
+            document.getElementById('loading').style.display = 'block';
+            setTimeout(() => {
+                setupScene();
+                generateWorld();
+                setupWeatherSystems();
+                initSplashParticles(); 
+                finalizeInit();
+                document.getElementById('loading').style.display = 'none';
+                
+                setTimeout(() => {
+                    const disclaimer = document.getElementById('disclaimer');
+                    if (disclaimer) {
+                        disclaimer.style.opacity = '0';
+                    }
+                }, 5000);
+
+            }, 100);
+        }
+
+        function setupScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x7EC8E3); 
+            scene.fog = new THREE.FogExp2(0x7EC8E3, 0.002); 
+
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(200, 300, 200);
+            scene.add(dirLight);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(30, 6, 95); 
+            camera.lookAt(45, 6, 95);
+
+            controls = new PointerLockControls(camera, document.body);
+
+            const blocker = document.getElementById('blocker');
+            const instructions = document.getElementById('instructions');
+
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleMute();
+            });
+
+            instructions.addEventListener('click', function (event) { 
+                if (isFirstStart) {
+                    isFirstStart = false;
+                    document.getElementById('gameTitle').innerText = "Game Paused";
+                    document.querySelector('#instructions p').innerText = "Click to continue your adventure.";
+                    document.getElementById('blocker').style.display = 'none';
+                    isUIOpen = true;
+                    document.getElementById('storyModal').style.display = 'flex';
+                } else {
+                    controls.lock(); 
+                    if (!audioCtx) initAudio();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                }
+            });
+            controls.addEventListener('lock', function () { blocker.style.display = 'none'; });
+            controls.addEventListener('unlock', function () { 
+                if (!isUIOpen) blocker.style.display = 'flex'; 
+            });
+            scene.add(controls.getObject());
+
+            const onKeyDown = function (event) {
+                if (event.ctrlKey && (event.code === 'KeyM' || event.key === 'm' || event.key === 'M')) {
+                    toggleMute();
+                    event.preventDefault();
+                    return;
+                }
+
+                if (event.altKey && (event.code === 'KeyT' || event.key === 't' || event.key === 'T')) {
+                    event.preventDefault();
                     
-                    let titleLines = doc.splitTextToSize(act.title, contentWidth - 10);
-                    addPageIfNeeded(titleLines.length * 6 + 15);
-                    doc.text(titleLines, pageMargin + 5, currentY);
-                    currentY += (titleLines.length * 5);
+                    const tpDestinations = [
+                        { x: 335, z: 145 },
+                        { x: 175, z: 125 },
+                        { x: 100, z: 335 },
+                        { x: 300, z: 325 }
+                    ];
+                    
+                    const playerPos = controls.getObject().position;
+                    let currentIdx = 0;
+                    let minDist = Infinity;
+                    
+                    for(let i=0; i<tpDestinations.length; i++) {
+                        let dist = Math.hypot(playerPos.x - tpDestinations[i].x, playerPos.z - tpDestinations[i].z);
+                        if(dist < minDist) {
+                            minDist = dist;
+                            currentIdx = i;
+                        }
+                    }
+                    
+                    let nextIdx = (currentIdx + 1) % tpDestinations.length;
+                    let dest = tpDestinations[nextIdx];
+                    
+                    let highestY = getFloorHeight(dest.x, dest.z, 50);
+                    controls.getObject().position.set(dest.x, highestY + 3, dest.z);
+                    velocity.y = 0;
+                    return;
+                }
 
-                    doc.setFontSize(11);
-                    doc.setFont("helvetica", "normal");
-                    doc.setTextColor(...colors.lightText);
-                    let promptLines = doc.splitTextToSize(act.prompt, contentWidth - 10);
-                    addPageIfNeeded(promptLines.length * 5 + 8);
-                    doc.text(promptLines, pageMargin + 5, currentY + 2);
-                    currentY += (promptLines.length * 5) + 8;
-                });
+                if (event.altKey && (event.code === 'KeyS' || event.key === 's' || event.key === 'S')) {
+                    if (document.getElementById('testModal').style.display === 'flex') {
+                        event.preventDefault();
+                        
+                        for(let i=0; i<10; i++) {
+                            const card = document.getElementById(`fc-${i}`);
+                            if(card) card.classList.add('correct');
+                        }
+                        
+                        const resP = document.getElementById('testResult');
+                        resP.style.color = 'green';
+                        resP.innerText = `Test Passed (Shortcut)! 10/10 correct.`;
+                        document.getElementById('checkTestBtn').style.display = 'none';
+                        document.getElementById('continueTestBtn').style.display = 'block';
+                        return;
+                    }
+                }
+
+                if (event.altKey && (event.code === 'KeyM' || event.key === 'm' || event.key === 'M')) {
+                    event.preventDefault();
+                    renderer.render(scene, camera);
+                    const link = document.createElement('a');
+                    link.download = 'captura_craft_islands.png';
+                    link.href = renderer.domElement.toDataURL('image/png');
+                    link.click();
+                    return;
+                }
+
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW': moveForward = true; break;
+                    case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+                    case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+                    case 'ArrowRight': case 'KeyD': moveRight = true; break;
+                    case 'KeyR': isRunning = true; break; 
+                    case 'Space':
+                        if (canJump === true) velocity.y += 11; 
+                        canJump = false;
+                        break;
+                }
+            };
+
+            const onKeyUp = function (event) {
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW': moveForward = false; break;
+                    case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+                    case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+                    case 'ArrowRight': case 'KeyD': moveRight = false; break;
+                    case 'KeyR': isRunning = false; break; 
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', onMouseClick);
+
+            initFireParticles();
+        }
+
+        function onMouseClick(event) {
+            if(!controls.isLocked) return;
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(interactables, false);
+            if (intersects.length > 0 && intersects[0].distance < 6) {
+                handleInteraction(intersects[0].object);
             }
-        });
-
-        doc.save(`Course_${courseId}_Unit_${unitId}_Activities.pdf`);
-    };
-
-    return (
-        <div className="p-4 md:p-8">
-            <div className="mb-8">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-4xl font-bold text-gray-800">My Speaking Activities</h1>
-                        <button onClick={() => onNavigate('home')} className="text-sm text-blue-600 hover:underline font-semibold whitespace-nowrap">
-                            &larr; Go back to main page
-                        </button>
-                    </div>
-                    <div className="relative">
-                         <input type="text" placeholder="Search activities..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-72 pl-10 pr-4 py-2 border rounded-lg"/>
-                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                    </div>
-                </div>
-                 <div className="flex flex-wrap gap-2 mt-4">
-                    <button onClick={() => setActiveFilter('all')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-colors ${activeFilter === 'all' ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>All</button>
-                    {Object.keys(courseData).map(courseId => (
-                        <button key={courseId} onClick={() => setActiveFilter(courseId)} className={`px-4 py-2 text-sm font-bold text-white rounded-lg transition-opacity ${courseCardColors[courseId]} ${activeFilter !== courseId && activeFilter !== 'all' ? 'opacity-50' : ''}`}>
-                            {courseId}º ESO
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {filteredSpeakings.length === 0 ? (
-                <div className="text-center py-16">
-                    <p className="text-xl text-gray-500">No speaking activities found.</p>
-                    <button onClick={() => onNavigate('create')} className="mt-4 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700">Create a new one!</button>
-                </div>
-            ) : (
-                <div className="space-y-10">
-                    {Object.keys(speakingsByCourseAndUnit).sort().map(courseId => (
-                        <div key={courseId}>
-                            <h2 className={`text-2xl font-bold mb-4 p-3 rounded-lg text-white ${courseCardColors[courseId]}`}>{courseId}º ESO</h2>
-                            <div className="space-y-6">
-                                    {Object.keys(speakingsByCourseAndUnit[courseId]).sort((a,b) => a - b).map(unitId => {
-                                        const unitInfo = courseData[courseId]?.units[unitId];
-                                        const unitColorClass = unitButtonColors[courseId]?.[unitId - 1] || 'bg-gray-200';
-                                        const activitiesForUnit = speakingsByCourseAndUnit[courseId][unitId];
-                                        return (
-                                            <div key={unitId}>
-                                                <div className={`flex justify-between items-center p-2 rounded-t-lg font-bold text-lg ${unitColorClass}`}>
-                                                    <span>Unit {unitId}: {unitInfo?.title}</span>
-                                                    <div className="flex items-center">
-                                                        <button 
-                                                            onClick={() => handleDownloadUnitPDF(courseId, unitId, activitiesForUnit)}
-                                                            className="p-1.5 rounded-full hover:bg-black/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            title={isPdfLibReady ? "Download unit activities as PDF" : "PDF library is loading..."}
-                                                            disabled={!isPdfLibReady}
-                                                        >
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z" clipRule="evenodd" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
-                                                    {activitiesForUnit.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]).map(speaking => {
-                                                        const speakingStyles = activityCardStyles[speaking.type] || activityCardStyles.default;
-                                                        return (
-                                                            <div key={speaking.id} id={`speaking-${speaking.id}`} className={`rounded-xl shadow-lg p-6 flex flex-col ${speakingStyles.card}`}>
-                                                                <div className="flex justify-between items-start mb-3">
-                                                                    <h3 className="text-xl font-bold text-gray-800 flex-1 pr-2">{speaking.title}</h3>
-                                                                    <span className={`capitalize flex-shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${speakingStyles.tag}`}>
-                                                                        {formatTypeName(speaking.type)}
-                                                                    </span>
-                                                                </div>
-                                                                <p className="text-gray-700 flex-grow mb-4">{speaking.prompt}</p>
-                                                                <div className="flex justify-between items-center mt-auto border-t pt-3">
-                                                                    <button onClick={() => onDisplayActivity(speaking)} className="flex items-center gap-2 text-sm bg-orange-500 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-orange-600 transition-colors">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                                                                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.022 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                                                                        </svg>
-                                                                        Display
-                                                                    </button>
-                                                                    <div className="flex items-center space-x-4">
-                                                                        <button onClick={() => setEditingSpeaking(speaking)} className="text-sm text-blue-600 hover:underline font-semibold">Edit</button>
-                                                                        <button onClick={() => setActivityToDelete(speaking.id)} className="text-red-500 hover:text-red-700 font-semibold" title="Delete Activity">
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                            </svg>
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-            {editingSpeaking && (
-                <Modal onClose={() => setEditingSpeaking(null)}>
-                    <EditSpeakingForm speaking={editingSpeaking} onSave={handleUpdate} onCancel={() => setEditingSpeaking(null)} />
-                </Modal>
-            )}
-            {activityToDelete && (
-                <ConfirmationModal 
-                    title="Delete Activity"
-                    message="Are you sure you want to permanently delete this activity? This action cannot be undone."
-                    onConfirm={handleDeleteConfirm}
-                    onCancel={() => setActivityToDelete(null)}
-                />
-            )}
-        </div>
-    );
-};
-
-function App() {
-    const [currentPage, setCurrentPage] = useState('home'); 
-    const [speakings, setSpeakings] = useState(() => {
-        try {
-            const saved = localStorage.getItem('speakings');
-            return saved ? JSON.parse(saved) : [];
-        } catch (e) {
-            console.error("Failed to parse speakings from localStorage", e);
-            return [];
         }
-    });
-    const [scrollToSpeakingId, setScrollToSpeakingId] = useState(null);
-    const [activityToDisplay, setActivityToDisplay] = useState(null);
-    const [showNewsModal, setShowNewsModal] = useState(false);
-    const [isPdfLibReady, setIsPdfLibReady] = useState(false);
 
-    useEffect(() => {
-        if (document.querySelector('script[src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"]')) {
-            setIsPdfLibReady(true);
-            return;
-        }
-        const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-        script.async = true;
-        script.onload = () => setIsPdfLibReady(true);
-        script.onerror = () => console.error("Failed to load jsPDF library.");
-        document.body.appendChild(script);
-
-        return () => {
-            if (document.body.contains(script)) {
-                document.body.removeChild(script);
+        function handleInteraction(obj) {
+            const data = obj.userData;
+            if(data.type === 'door') {
+                const zone = zones[data.zone];
+                if(zone.locked) {
+                    
+                } else {
+                    zone.door.targetRot = zone.door.targetRot === zone.door.baseRot ? zone.door.openRot : zone.door.baseRot;
+                }
+            } else if (data.type === 'book') {
+                openBook(data.zone);
+            } else if (data.type === 'lever') {
+                openTest(data.zone);
             }
-        };
-    }, []);
-
-    useEffect(() => {
-        try {
-            localStorage.setItem('speakings', JSON.stringify(speakings));
-        } catch (e) {
-            console.error("Failed to save speakings to localStorage", e);
         }
-    }, [speakings]);
 
-    const handleNavigate = (page) => setCurrentPage(page);
+        function openBook(zoneId) {
+            isUIOpen = true;
+            document.exitPointerLock();
+            document.getElementById('blocker').style.display = 'none';
+            document.getElementById('bookModal').style.display = 'flex';
+            document.getElementById('bookTitle').innerText = `Block ${zoneId} Verbs`;
+            
+            const grid = document.getElementById('bookGrid');
+            grid.innerHTML = `
+                <div class="verb-header">Meaning (ES)</div><div class="verb-header">Infinitive</div><div class="verb-header">Past Simple</div><div class="verb-header">Participle</div>
+            `;
+            VERB_BLOCKS[zoneId].forEach(v => {
+                grid.innerHTML += `
+                    <div class="verb-cell">${v.es}</div>
+                    <div class="verb-cell">${v.v1}</div>
+                    <div class="verb-cell">${v.v2}</div>
+                    <div class="verb-cell">${v.v3}</div>
+                `;
+            });
+        }
 
-    const handleSaveSpeaking = (newSpeaking) => {
-        setSpeakings(prev => [newSpeaking, ...prev]);
-    };
-    
-    const handleGoToSpeaking = (speakingId) => {
-        setCurrentPage('mySpeakings');
-        setScrollToSpeakingId(speakingId);
-    };
-    
-    const handleScrollComplete = () => {
-        setScrollToSpeakingId(null);
-    };
-    
-    const handleUpdateSpeaking = (id, updatedData) => {
-        setSpeakings(prev => prev.map(s => s.id === id ? updatedData : s));
-    };
+        function openTest(zoneId) {
+            const zone = zones[zoneId];
+            if(zone.completed) return;
+            
+            isUIOpen = true;
+            document.exitPointerLock();
+            document.getElementById('blocker').style.display = 'none';
+            activeTestZone = zoneId;
+            document.getElementById('testModal').style.display = 'flex';
+            document.getElementById('testResult').innerText = "";
+            document.getElementById('checkTestBtn').style.display = 'block';
+            document.getElementById('continueTestBtn').style.display = 'none';
+            
+            const allVerbs = [...VERB_BLOCKS[zoneId]];
+            activeTestVerbs = allVerbs.sort(() => 0.5 - Math.random()).slice(0, 10);
+            
+            const container = document.getElementById('testCardsContainer');
+            container.innerHTML = "";
+            activeTestVerbs.forEach((v, i) => {
+                container.innerHTML += `
+                    <div class="flashcard" id="fc-${i}">
+                        <div class="flashcard-es">${v.es}</div>
+                        <div><input type="text" id="v1-${i}" placeholder="Infinitive" autocomplete="off"> <span class="emoji-feedback" id="e1-${i}"></span></div>
+                        <div><input type="text" id="v2-${i}" placeholder="Past" autocomplete="off"> <span class="emoji-feedback" id="e2-${i}"></span></div>
+                        <div><input type="text" id="v3-${i}" placeholder="Participle" autocomplete="off"> <span class="emoji-feedback" id="e3-${i}"></span></div>
+                    </div>
+                `;
+            });
+        }
 
-    const handleDeleteSpeaking = (id) => {
-        setSpeakings(prev => prev.filter(s => s.id !== id));
-    };
-    
-    return (
-        <>
-            <style>{`
-                @keyframes fall-left {
-                    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-                    100% { transform: translate(-200px, 300px) rotate(-45deg); opacity: 0; }
-                }
-                .fall-left-animation {
-                    animation: fall-left 0.7s forwards ease-in;
-                }
-                @keyframes fall-right {
-                    0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
-                    100% { transform: translate(200px, 300px) rotate(45deg); opacity: 0; }
-                }
-                .fall-right-animation {
-                    animation: fall-right 0.7s forwards ease-in;
-                }
-                .flash-animation {
-                    animation: flash 1.5s ease-out;
-                }
-                @keyframes flash {
-                    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-                    70% { box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
-                }
-                .animate-fade-in {
-                    animation: fadeIn 0.5s ease-in-out;
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-            `}</style>
-            <div className="min-h-screen bg-gray-50 font-sans">
-                {currentPage !== 'home' && <Header onNavigate={handleNavigate} onShowNews={() => setShowNewsModal(true)} />}
-                <main>
-                    {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
-                    {currentPage === 'create' && <CreateSpeakingPage onNavigate={handleNavigate} onSaveSpeaking={handleSaveSpeaking} onGoToSpeaking={handleGoToSpeaking} />}
-                    {currentPage === 'mySpeakings' && <MySpeakingsPage 
-                        onNavigate={handleNavigate} 
-                        speakings={speakings} 
-                        onUpdateSpeaking={handleUpdateSpeaking} 
-                        onDeleteSpeaking={handleDeleteSpeaking}
-                        scrollToSpeakingId={scrollToSpeakingId}
-                        onScrollComplete={handleScrollComplete}
-                        onDisplayActivity={setActivityToDisplay}
-                        isPdfLibReady={isPdfLibReady}
-                    />}
-                </main>
-                {currentPage !== 'home' && <Footer />}
-                <DisplayActivityPage activity={activityToDisplay} onClose={() => setActivityToDisplay(null)} />
-                {showNewsModal && <NewsModal onClose={() => setShowNewsModal(false)} />}
-            </div>
-        </>
-    );
-}
+        function createInteractable(geo, mat, x, y, z, userData) {
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.userData = userData;
+            scene.add(mesh);
+            interactables.push(mesh);
+            return mesh;
+        }
 
-export default App;
+        function createControlledDoor(x, y, z, width, height, pivotOffsetX, pivotOffsetZ, rotationY, swingAngle, zoneId, tiltX = 0) {
+            const baseGroup = new THREE.Group();
+            baseGroup.position.set(x, y, z); 
+            baseGroup.rotation.x = tiltX;
+            scene.add(baseGroup);
+
+            const doorGroup = new THREE.Group();
+            baseGroup.add(doorGroup);
+            
+            const doorGeo = new THREE.BoxGeometry(width, height, 0.3); 
+            const doorMat = new THREE.MeshLambertMaterial({ map: texPlank });
+            const doorMesh = new THREE.Mesh(doorGeo, doorMat);
+            
+            doorMesh.position.set(pivotOffsetX, height / 2, pivotOffsetZ); 
+            doorMesh.userData = { type: 'door', zone: zoneId };
+            interactables.push(doorMesh);
+
+            doorGroup.add(doorMesh);
+            doorGroup.rotation.y = rotationY;
+            
+            const doorObj = {
+                group: doorGroup,
+                baseRot: rotationY,
+                openRot: rotationY + swingAngle,
+                targetRot: rotationY,
+                minX: x + pivotOffsetX - width / 2 - 0.2, 
+                maxX: x + pivotOffsetX + width / 2 + 0.2,
+                minY: y,
+                maxY: y + height,
+                minZ: z + pivotOffsetZ - 0.4,
+                maxZ: z + pivotOffsetZ + 0.4
+            };
+            zones[zoneId].door = doorObj;
+            return doorObj;
+        }
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const rainNoise = audioCtx.createBufferSource();
+            rainNoise.buffer = noiseBuffer;
+            rainNoise.loop = true;
+            const rainFilter = audioCtx.createBiquadFilter();
+            rainFilter.type = 'lowpass'; 
+            rainFilter.frequency.value = 1500;
+            rainGain = audioCtx.createGain();
+            rainGain.gain.value = 0;
+            rainNoise.connect(rainFilter).connect(rainGain).connect(audioCtx.destination);
+            rainNoise.start();
+
+            const windNoise = audioCtx.createBufferSource();
+            windNoise.buffer = noiseBuffer;
+            windNoise.loop = true;
+            const windFilter = audioCtx.createBiquadFilter();
+            windFilter.type = 'lowpass';
+            windFilter.frequency.value = 400;
+            windGain = audioCtx.createGain();
+            windGain.gain.value = 0;
+            windNoise.connect(windFilter).connect(windGain).connect(audioCtx.destination);
+            windNoise.start();
+
+            const windLFO = audioCtx.createOscillator();
+            windLFO.type = 'sine';
+            windLFO.frequency.value = 0.3;
+            const windLFOGain = audioCtx.createGain();
+            windLFOGain.gain.value = 250;
+            windLFO.connect(windLFOGain).connect(windFilter.frequency);
+            windLFO.start();
+        }
+
+        function playThunder(muffled) {
+            if (!audioCtx || isMuted) return;
+            const now = audioCtx.currentTime;
+
+            const bufferSize = audioCtx.sampleRate * 4;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+
+            const noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.value = muffled ? 100 : 300;
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0, now);
+            noiseGain.gain.linearRampToValueAtTime(muffled ? 0.5 : 1.5, now + 0.1);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 3.5);
+
+            noise.connect(noiseFilter).connect(noiseGain).connect(audioCtx.destination);
+            noise.start(now);
+        }
+
+        function finalizeInit() {
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function initFireParticles() {
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = [];
+            for(let i=0; i<60; i++) {
+                pPos.push(270 + (Math.random()-0.5)*0.8, 4.5 + Math.random()*2, 120 + (Math.random()-0.5)*0.8);
+            }
+            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+            fireParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({color: 0xffaa00, size: 0.25, transparent: true, opacity: 0.9}));
+            scene.add(fireParticles);
+        }
+
+        function setupWeatherSystems() {
+            const cloudGeo = new THREE.BoxGeometry(60, 8, 60);
+            const cloudMat = new THREE.MeshLambertMaterial({color: 0xffffff, transparent: true, opacity: 0.0});
+            cloudParticles = new THREE.InstancedMesh(cloudGeo, cloudMat, 50);
+            const dummy = new THREE.Object3D();
+            for(let i=0; i<50; i++) {
+                dummy.position.set((Math.random()-0.5)*800 + 200, 120 + Math.random()*15, (Math.random()-0.5)*800 + 200);
+                dummy.updateMatrix();
+                cloudParticles.setMatrixAt(i, dummy.matrix);
+            }
+            scene.add(cloudParticles);
+
+            const rainGeo = new THREE.BufferGeometry();
+            const rainPos = new Float32Array(3000 * 3);
+            for(let i=0; i<3000; i++) {
+                rainPos[i*3] = (Math.random() - 0.5) * 80;
+                rainPos[i*3+1] = Math.random() * 80;
+                rainPos[i*3+2] = (Math.random() - 0.5) * 80;
+            }
+            rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+            const rainMat = new THREE.PointsMaterial({color: 0xaaaaee, size: 0.5, transparent: true, opacity: 0});
+            rainParticles = new THREE.Points(rainGeo, rainMat);
+            scene.add(rainParticles);
+
+            const snowGeo = new THREE.BufferGeometry();
+            const snowPos = new Float32Array(3000 * 3);
+            for(let i=0; i<3000; i++) {
+                snowPos[i*3] = (Math.random() - 0.5) * 80;
+                snowPos[i*3+1] = Math.random() * 80;
+                snowPos[i*3+2] = (Math.random() - 0.5) * 80;
+            }
+            snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+            const snowMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.8, transparent: true, opacity: 0});
+            snowParticles = new THREE.Points(snowGeo, snowMat);
+            scene.add(snowParticles);
+
+            const lightGeo = new THREE.CylinderGeometry(0.5, 0.1, 100, 4);
+            const lightMat = new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0});
+            lightningMesh = new THREE.Mesh(lightGeo, lightMat);
+            scene.add(lightningMesh);
+        }
+
+        function initSplashParticles() {
+            const geometry = new THREE.BufferGeometry();
+            splashPositions = new Float32Array(MAX_SPLASH_PARTICLES * 3);
+            for(let i=0; i<MAX_SPLASH_PARTICLES; i++) {
+                splashPositions[i*3] = 0; splashPositions[i*3+1] = -1000; splashPositions[i*3+2] = 0;
+                splashVelocities.push(new THREE.Vector3(0,0,0));
+                splashLifetimes.push(0);
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(splashPositions, 3));
+            const material = new THREE.PointsMaterial({ color: 0xffffff, size: 0.4, transparent: true, opacity: 0.8 });
+            splashParticles = new THREE.Points(geometry, material);
+            scene.add(splashParticles);
+        }
+
+        function createSplash(x, y, z, count, speedModifier = 1.0) {
+            let created = 0;
+            for(let i=0; i<MAX_SPLASH_PARTICLES && created < count; i++) {
+                if(splashLifetimes[i] <= 0) {
+                    splashPositions[i*3] = x + (Math.random() - 0.5);
+                    splashPositions[i*3+1] = y;
+                    splashPositions[i*3+2] = z + (Math.random() - 0.5);
+                    splashVelocities[i].set((Math.random() - 0.5) * 5 * speedModifier, (Math.random() * 8 + 4) * speedModifier, (Math.random() - 0.5) * 5 * speedModifier);
+                    splashLifetimes[i] = 1.0; 
+                    created++;
+                }
+            }
+        }
+
+        function addBlock(x, y, z, type, colorHex = null) {
+            const floorY = Math.floor(y);
+            const bx = Math.floor(x);
+            const bz = Math.floor(z);
+            const key = `${bx},${floorY},${bz}`;
+            
+            if (type === TYPES.WATER) {
+                if (waterSet.has(key)) return; 
+                waterSet.add(key);
+                blockData[type].push({x, y, z, color: colorHex});
+                return;
+            }
+
+            if(type !== TYPES.FLOWER && type !== TYPES.STEM && type !== TYPES.TORCH) {
+                blocksMap.set(key, type);
+            }
+            blockData[type].push({x, y, z, color: colorHex});
+        }
+
+        function fillInvisibleCollisionBox(minX, maxX, minY, maxY, minZ, maxZ) {
+            for(let x=minX; x<=maxX; x++) {
+                for(let y=minY; y<=maxY; y++) {
+                    for(let z=minZ; z<=maxZ; z++) {
+                        blocksMap.set(`${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`, INVISIBLE_BARRIER);
+                    }
+                }
+            }
+        }
+
+        function getSmoothTerrainHeight(x, z, originalHeight) {
+            const clearings = [
+                {cx: 175, cz: 100, r: 16, blend: 10, h: 3},   
+                {cx: 335, cz: 135, r: 12, blend: 12, h: 10}, 
+                {cx: 100, cz: 350, r: 16, blend: 12, h: 24}, 
+                {cx: 300, cz: 300, r: 20, blend: 12, h: 5},
+                {cx: 45, cz: 95, r: 15, blend: 10, h: 3}
+            ];
+            let finalHeight = originalHeight;
+            for (let c of clearings) {
+                const dist = Math.hypot(x - c.cx, z - c.cz);
+                if (dist < c.r) {
+                    return c.h; 
+                } else if (dist < c.r + c.blend) {
+                    let factor = (dist - c.r) / c.blend;
+                    factor = factor * factor * (3 - 2 * factor);
+                    finalHeight = c.h * (1 - factor) + originalHeight * factor;
+                }
+            }
+            return finalHeight;
+        }
+
+        function generateWorld() {
+            const oceanLevel = 2;
+            const islandRadius = 80;
+
+            const getEdgeBlend = (dist) => {
+                if (dist < 55) return 0;
+                if (dist > 80) return 1;
+                return (dist - 55) / 25;
+            };
+
+            const isSafeForVegetation = (x, z) => {
+                if (Math.hypot(x - 175, z - 100) < 22) return false; 
+                if (Math.hypot(x - 335, z - 135) < 16) return false; 
+                if (Math.hypot(x - 100, z - 350) < 22) return false; 
+                if (Math.hypot(x - 300, z - 300) < 24) return false; 
+                if (Math.hypot(x - 45, z - 95) < 20) return false;
+                return true;
+            };
+
+            for(let x=0; x<=200; x++) {
+                for(let z=0; z<=200; z++) {
+                    const dist = Math.sqrt((x-100)**2 + (z-100)**2);
+                    if(dist < islandRadius) {
+                        let rawHeight = 3; 
+                        if(dist < 25) rawHeight += Math.floor(45 - dist * 1.8);
+                        
+                        let blendedHeight = Math.max(2, Math.floor(rawHeight * (1 - getEdgeBlend(dist)) + 2 * getEdgeBlend(dist)));
+                        let height = Math.floor(getSmoothTerrainHeight(x, z, blendedHeight));
+
+                        let isLavaRiver = false;
+                        if (dist >= 5 && dist < 40) {
+                            const angle = Math.atan2(z - 100, x - 100) * 180 / Math.PI;
+                            if (Math.abs(angle - 45) < 12) isLavaRiver = true; 
+                            if (Math.abs(angle - (-135)) < 12) isLavaRiver = true; 
+                        }
+
+                        for(let y=Math.max(0, height-3); y<=height; y++) {
+                            let type = TYPES.SAND;
+                            if(height > 5 && y > 3) type = TYPES.STONE;
+                            if(y === height && dist < 5 && height > 5) type = TYPES.LAVA;
+                            if(y === height && isLavaRiver && height > 2) type = TYPES.LAVA;
+                            addBlock(x, y, z, type);
+                        }
+
+                        if(height <= 4 && height >= 2 && isSafeForVegetation(x, z) && !isLavaRiver && Math.random() < 0.03) {
+                            const treeH = 5 + Math.floor(Math.random()*4);
+                            for(let py=1; py<=treeH; py++) addBlock(x, height+py, z, TYPES.WOOD);
+                            const topY = height + treeH;
+                            addBlock(x, topY+1, z, TYPES.LEAVES);
+                            for(let dx=-2; dx<=2; dx++) {
+                                for(let dz=-2; dz<=2; dz++) {
+                                    if (Math.abs(dx) + Math.abs(dz) <= 2 && !(dx===0 && dz===0)) addBlock(x+dx, topY, z+dz, TYPES.LEAVES);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            const peaks = [{x: 300, z: 100, h: 48}, {x: 275, z: 85, h: 35}, {x: 325, z: 120, h: 42}];
+            const caveCenter = {x: 270, y: 4, z: 120}; 
+
+            for(let x=200; x<=400; x++) {
+                for(let z=0; z<=200; z++) {
+                    const dist = Math.sqrt((x-300)**2 + (z-100)**2);
+                    if(dist < islandRadius) {
+                        let rawHeight = 2;
+                        for(let p of peaks) {
+                            const pDist = Math.sqrt((x-p.x)**2 + (z-p.z)**2);
+                            const h = p.h - pDist * 1.2;
+                            if(h > rawHeight) rawHeight = h;
+                        }
+                        
+                        let blendedHeight = Math.max(2, Math.floor(rawHeight * (1 - getEdgeBlend(dist)) + 2 * getEdgeBlend(dist)));
+                        let height = Math.floor(getSmoothTerrainHeight(x, z, blendedHeight));
+                        
+                        let minY = Math.max(0, height - 3);
+                        const distToCaveCenter = Math.hypot(x-caveCenter.x, z-caveCenter.z);
+                        if (distToCaveCenter < 20) minY = 0; 
+
+                        for(let y=minY; y<=height; y++) {
+                            const dx = x - caveCenter.x;
+                            const dy = (y - caveCenter.y) * 1.5; 
+                            const dz = z - caveCenter.z;
+                            const distToCave = Math.sqrt(dx*dx + dy*dy + dz*dz);
+                            
+                            if(distToCave < 10 && y > 3 && y < 14) continue; 
+
+                            let type = TYPES.DIRT;
+                            if(y === height) {
+                                if(y > 25) type = TYPES.SNOW;
+                                else if(y > 10) type = TYPES.STONE;
+                                else type = TYPES.GRASS;
+                            } else if(y > 10) {
+                                type = TYPES.STONE;
+                            }
+                            addBlock(x, y, z, type);
+                        }
+                    }
+                }
+            }
+
+            for(let x=0; x<=200; x++) {
+                for(let z=200; z<=400; z++) {
+                    const dist = Math.sqrt((x-100)**2 + (z-300)**2);
+                    if(dist < islandRadius) {
+                        let rawHeight = 4;
+                        let localZ = z - 300;
+                        let localX = x - 100;
+                        
+                        if (localZ > 10) {
+                            rawHeight = 24; 
+                            if (Math.abs(localX) > 20) rawHeight = 4 + Math.max(0, 20 - (Math.abs(localX) - 20)*1.2);
+                        } else if (localZ > -10) {
+                            let factor = (localZ + 10) / 20;
+                            rawHeight = 4 + (20 * factor);
+                            if (Math.abs(localX) > 20) rawHeight = Math.min(rawHeight, 4 + Math.max(0, 20 - (Math.abs(localX) - 20)*1.2));
+                        }
+
+                        let blendedHeight = Math.max(2, Math.floor(rawHeight * (1 - getEdgeBlend(dist)) + 2 * getEdgeBlend(dist)));
+                        let height = Math.floor(getSmoothTerrainHeight(x, z, blendedHeight));
+
+                        const distToTower = Math.hypot(x - 100, z - 350);
+                        const isRiver = (Math.abs(localX) <= 3 && localZ > -100) && distToTower > 14;
+
+                        let maxLoopY = height;
+                        let minY = Math.max(0, height - 3);
+
+                        if (isRiver) {
+                            if (localZ > -10 && localZ < 10) {
+                                maxLoopY = 24; minY = 0; 
+                            } else if (localZ <= -10) {
+                                maxLoopY = Math.max(height, 2); minY = 0;
+                            }
+                        }
+
+                        for(let y=minY; y<=maxLoopY; y++) {
+                            if (isRiver) {
+                                if (localZ >= 10) {
+                                    if (y < height - 1) addBlock(x, y, z, TYPES.STONE);
+                                    else if (y === height - 1) addBlock(x, y, z, TYPES.DIRT);
+                                    else if (y === height) addBlock(x, y, z, TYPES.WATER);
+                                } else if (localZ > -10 && localZ < 10) {
+                                    if (y < height - 1) addBlock(x, y, z, TYPES.STONE);
+                                    else if (y >= height && y <= 24) addBlock(x, y, z, TYPES.WATER);
+                                } else { 
+                                    if (y === 0) addBlock(x, y, z, TYPES.STONE);
+                                    else if (y === 1) addBlock(x, y, z, TYPES.DIRT);
+                                    else if (y === 2) addBlock(x, y, z, TYPES.WATER);
+                                }
+                            } else {
+                                if (y <= height) addBlock(x, y, z, y === height ? TYPES.GRASS : TYPES.DIRT);
+                            }
+                        }
+
+                        if(!isRiver && isSafeForVegetation(x, z)) {
+                            if(Math.random() < 0.08 && height >= 4) {
+                                const treeH = 8 + Math.floor(Math.random()*6);
+                                for(let py=1; py<=treeH; py++) addBlock(x, height+py, z, TYPES.WOOD);
+                                for(let dx=-3; dx<=3; dx++) {
+                                    for(let dy=-2; dy<=3; dy++) {
+                                        for(let dz=-3; dz<=3; dz++) {
+                                            if(dx*dx + dy*dy + dz*dz <= 10) addBlock(x+dx, height+treeH+dy, z+dz, TYPES.LEAVES);
+                                        }
+                                    }
+                                }
+                            }
+                            if(Math.random() < 0.12 && height >= 4) {
+                                const colors = [0xff0000, 0xffff00, 0x0000ff, 0xff00ff, 0xffa500, 0xffffff];
+                                addBlock(x, height+1, z, TYPES.STEM);
+                                addBlock(x, height+1.4, z, TYPES.FLOWER, colors[Math.floor(Math.random()*colors.length)]);
+                            }
+                        }
+                    }
+                }
+            }
+
+            for(let x=200; x<=400; x++) {
+                for(let z=200; z<=400; z++) {
+                    const dist = Math.sqrt((x-300)**2 + (z-300)**2);
+                    if(dist < islandRadius) {
+                        let dunaHeight = Math.sin(x * 0.1) * 2 + Math.cos(z * 0.1) * 2;
+                        let rawHeight = 4 + Math.max(0, dunaHeight);
+
+                        let blendedHeight = Math.max(2, Math.floor(rawHeight * (1 - getEdgeBlend(dist)) + 2 * getEdgeBlend(dist)));
+                        let height = Math.floor(getSmoothTerrainHeight(x, z, blendedHeight));
+
+                        for(let y=Math.max(0, height - 3); y<=height; y++) {
+                            addBlock(x, y, z, TYPES.SAND);
+                        }
+
+                        if(Math.random() < 0.01 && height >= 3 && isSafeForVegetation(x, z)) {
+                            const cHeight = 3 + Math.floor(Math.random()*4);
+                            for(let py=1; py<=cHeight; py++) addBlock(x, height+py, z, TYPES.CACTUS);
+                            if(cHeight > 3 && Math.random() > 0.5) addBlock(x+1, height+3, z, TYPES.CACTUS);
+                            if(cHeight > 4 && Math.random() > 0.5) addBlock(x-1, height+4, z, TYPES.CACTUS);
+                        }
+                    }
+                }
+            }
+
+            for (let x = -100; x <= 500; x++) {
+                for (let z = -100; z <= 500; z++) {
+                    let topFloor = getFloorHeight(x, z, 50);
+                    if (topFloor <= oceanLevel && !isInsideStructure(x, z, oceanLevel)) {
+                        addBlock(x, oceanLevel, z, TYPES.WATER);
+                    }
+                }
+            }
+
+            let rotY85 = Math.atan2(85 - 100, 45 - 100) - Math.PI;
+            buildMoai(45, getFloorHeight(45, 85, 50), 85, rotY85);
+
+            let rotY95 = Math.atan2(95 - 100, 45 - 100) - Math.PI;
+            buildMoai(45, getFloorHeight(45, 95, 50), 95, rotY95);
+
+            let rotY105 = Math.atan2(105 - 100, 45 - 100) - Math.PI;
+            buildMoai(45, getFloorHeight(45, 105, 50), 105, rotY105);
+
+            buildCampfire(270, 4, 120);
+            
+            buildLogHut(335, 10, 135);
+            buildShipwreck(175, 2, 100);
+            buildHinduTemple(100, 24, 350);
+            buildHugePyramid(300, 5, 300);
+
+            const blockGeo = new THREE.BoxGeometry(1, 1, 1);
+            const matrix = new THREE.Matrix4();
+            const color = new THREE.Color();
+
+            for(let key in TYPES) {
+                const typeId = TYPES[key];
+                const data = blockData[typeId];
+                if(data.length === 0) continue;
+
+                let geo = blockGeo;
+                if(typeId === TYPES.FLOWER) geo = new THREE.BoxGeometry(0.7, 0.1, 0.7); 
+                if(typeId === TYPES.STEM) geo = new THREE.BoxGeometry(0.1, 0.8, 0.1);   
+                if(typeId === TYPES.TORCH) geo = new THREE.BoxGeometry(0.15, 0.5, 0.15); 
+
+                const materialsArray = Array.isArray(MATERIALS[typeId]) ? MATERIALS[typeId] : MATERIALS[typeId];
+                const mesh = new THREE.InstancedMesh(geo, materialsArray, data.length);
+                
+                for(let i=0; i<data.length; i++) {
+                    matrix.setPosition(data[i].x, data[i].y, data[i].z);
+                    mesh.setMatrixAt(i, matrix);
+                    
+                    if(data[i].color !== null) {
+                        color.setHex(data[i].color);
+                        mesh.setColorAt(i, color);
+                    } else {
+                        color.setHex(0xffffff);
+                        const hsl = {};
+                        color.getHSL(hsl);
+                        color.setHSL(hsl.h, hsl.s, hsl.l - Math.random() * 0.05);
+                        mesh.setColorAt(i, color);
+                    }
+                }
+                scene.add(mesh);
+                instancedMeshes[typeId] = mesh;
+            }
+
+            const pGeo = new THREE.BufferGeometry();
+            const pPos = [];
+            for(let i=0; i<400; i++) pPos.push(100 + (Math.random()-0.5)*6, 45 + Math.random()*20, 100 + (Math.random()-0.5)*6);
+            pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+            volcanoParticles = new THREE.Points(pGeo, new THREE.PointsMaterial({color: 0xff3300, size: 0.8}));
+            scene.add(volcanoParticles);
+        }
+
+        function buildMoai(cx, cy, cz, rotY) {
+            const blocks = [];
+            function addM(dx, dy, dz) {
+                blocks.push({x: dx, y: dy, z: dz});
+            }
+            
+            for(let y=0; y<=1; y++) {
+                for(let dx=0; dx<=2; dx++) {
+                    for(let dz=-1; dz<=1; dz++) addM(dx, y, dz);
+                }
+            }
+            for(let y=2; y<=3; y++) {
+                for(let dx=0; dx<=2; dx++) {
+                    for(let dz=-2; dz<=2; dz++) addM(dx, y, dz);
+                }
+                for(let dz=-2; dz<=2; dz++) addM(-1, y, dz);
+            }
+            for(let dx=0; dx<=2; dx++) {
+                for(let dz=-1; dz<=1; dz++) addM(dx, 4, dz);
+            }
+            for(let y=5; y<=6; y++) {
+                for(let dx=0; dx<=2; dx++) {
+                    for(let dz=-1; dz<=1; dz++) addM(dx, y, dz);
+                }
+                addM(-1, y, 0);
+            }
+            for(let dx=0; dx<=2; dx++) {
+                for(let dz=-1; dz<=1; dz++) {
+                    if (dx === 0 && (dz === -1 || dz === 1)) continue;
+                    addM(dx, 7, dz);
+                }
+            }
+            addM(-1, 7, 0); 
+            for(let dx=0; dx<=2; dx++) {
+                for(let dz=-1; dz<=1; dz++) addM(dx, 8, dz);
+            }
+            for(let dz=-1; dz<=1; dz++) addM(-1, 8, dz);
+            for(let y=9; y<=11; y++) {
+                for(let dx=0; dx<=2; dx++) {
+                    for(let dz=-1; dz<=1; dz++) addM(dx, y, dz);
+                }
+            }
+
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const imesh = new THREE.InstancedMesh(geo, MATERIALS[TYPES.STONE], blocks.length);
+            const dummy = new THREE.Object3D();
+            const color = new THREE.Color();
+            const hsl = {};
+            
+            for(let i=0; i<blocks.length; i++) {
+                dummy.position.set(blocks[i].x, blocks[i].y, blocks[i].z);
+                dummy.updateMatrix();
+                imesh.setMatrixAt(i, dummy.matrix);
+                
+                color.setHex(0xffffff);
+                color.getHSL(hsl);
+                color.setHSL(hsl.h, hsl.s, hsl.l - Math.random() * 0.05);
+                imesh.setColorAt(i, color);
+            }
+            
+            imesh.position.set(cx, cy, cz);
+            imesh.rotation.y = rotY;
+            scene.add(imesh);
+
+            for (let y = 0; y <= 11; y++) {
+                for (let dx = -1; dx <= 2; dx++) {
+                    for (let dz = -2; dz <= 2; dz++) {
+                        blocksMap.set(`${Math.floor(cx + dx)},${Math.floor(cy + y)},${Math.floor(cz + dz)}`, INVISIBLE_BARRIER);
+                    }
+                }
+            }
+        }
+
+        function buildCampfire(x, y, z) {
+            const fireGroup = new THREE.Group();
+            const logGeo = new THREE.CylinderGeometry(0.3, 0.3, 2.5, 8);
+            const logMat = new THREE.MeshLambertMaterial({ map: texWood });
+            
+            for(let i=0; i<4; i++) {
+                const log = new THREE.Mesh(logGeo, logMat);
+                log.rotation.x = Math.PI / 2;
+                log.rotation.z = (Math.PI / 4) * i;
+                log.position.y = 0.3;
+                fireGroup.add(log);
+            }
+            fireGroup.position.set(x, y, z);
+            scene.add(fireGroup);
+            addBlock(x, y-1, z, TYPES.LAVA); 
+            const light = new THREE.PointLight(0xff8800, 4.0, 40);
+            light.position.set(x, y + 2, z);
+            scene.add(light);
+        }
+
+        // ZONE 1: Hut (Block 1)
+        function buildLogHut(cx, cy, cz) {
+            const hutGroup = new THREE.Group();
+            const wallMat = new THREE.MeshLambertMaterial({ map: texWood });
+            const roofMat = new THREE.MeshLambertMaterial({ map: texPlank });
+            const floorMat = new THREE.MeshLambertMaterial({ map: texDirt });
+
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), floorMat);
+            floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0.1, 0); hutGroup.add(floor);
+            const wBack = new THREE.Mesh(new THREE.BoxGeometry(12, 5, 1), wallMat); wBack.position.set(0, 2.5, -5.5); hutGroup.add(wBack);
+            const wLeft = new THREE.Mesh(new THREE.BoxGeometry(1, 5, 10), wallMat); wLeft.position.set(-5.5, 2.5, 0); hutGroup.add(wLeft);
+            const wRight = new THREE.Mesh(new THREE.BoxGeometry(1, 5, 10), wallMat); wRight.position.set(5.5, 2.5, 0); hutGroup.add(wRight);
+            const wFront1 = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 1), wallMat); wFront1.position.set(-4, 2.5, 5.5); hutGroup.add(wFront1);
+            const wFront2 = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 1), wallMat); wFront2.position.set(4, 2.5, 5.5); hutGroup.add(wFront2);
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(9, 4, 4), roofMat); roof.rotation.y = Math.PI / 4; roof.position.set(0, 7, 0); hutGroup.add(roof);
+
+            hutGroup.position.set(cx, cy, cz);
+            scene.add(hutGroup);
+
+            createControlledDoor(cx - 2, cy + 0.1, cz + 5.5, 4, 4.8, 2, 0, 0, Math.PI / 1.5, 1);
+            
+            createInteractable(new THREE.BoxGeometry(1.5, 1.2, 1.0), new THREE.MeshLambertMaterial({color:0x3e2723}), cx+3, cy+0.6, cz-3, {type:'desk', zone:1});
+            createInteractable(new THREE.BoxGeometry(0.8, 0.2, 0.6), new THREE.MeshLambertMaterial({color:0x8b0000}), cx+3, cy+1.3, cz-3, {type:'book', zone:1});
+            createInteractable(new THREE.BoxGeometry(0.3, 1, 0.3), new THREE.MeshLambertMaterial({color:0xaaaaaa}), cx-4.8, cy+2.5, cz, {type:'lever', zone:1});
+        }
+
+        // ZONE 2: Shipwreck (Block 2)
+        function buildShipwreck(cx, cy, cz) {
+            const p = TYPES.PLANK;
+            const l = TYPES.WOOD;
+
+            for(let y=0; y<=8; y++) {
+                for(let dx=-4; dx<=4; dx++) {
+                    for(let dz=-14; dz<=3; dz++) {
+                        let isBlock = false;
+                        
+                        let width = 4;
+                        let maxHeight = 3; 
+
+                        if (dz === -6 || dz === -7) {
+                            width = 3;
+                            maxHeight = 4;
+                        } else if (dz === -8 || dz === -9) {
+                            width = 2;
+                            maxHeight = 5;
+                        } else if (dz === -10 || dz === -11) {
+                            width = 1;
+                            maxHeight = 6;
+                        } else if (dz <= -12) {
+                            width = 0;
+                            maxHeight = 7;
+                        }
+
+                        if (Math.abs(dx) <= width && y <= maxHeight) {
+                            isBlock = true;
+                        }
+
+                        if (y > 1 && y < maxHeight && Math.abs(dx) < width) {
+                            isBlock = false; 
+                        }
+
+                        if (dz >= -5 && dz <= 3 && y === 4 && Math.abs(dx) === width) {
+                            isBlock = true; 
+                        }
+
+                        if (isBlock && Math.random() > 0.92 && y >= 2 && Math.abs(dx) >= width - 1) {
+                            isBlock = false;
+                        }
+
+                        if (isBlock) addBlock(cx+dx, cy+y, cz+dz, p);
+                    }
+                }
+            }
+
+            for (let y = 0; y <= 5; y++) {
+                for (let dx = -4; dx <= 4; dx++) {
+                    for (let dz = 4; dz <= 12; dz++) {
+                        let isBlock = false;
+                        if (y === 0 && Math.abs(dx) <= 4) isBlock = true; 
+                        if (y === 5 && Math.abs(dx) <= 4) isBlock = true; 
+                        if (y >= 1 && y <= 4 && Math.abs(dx) === 4) isBlock = true; 
+                        if (y >= 1 && y <= 4 && dz === 12 && Math.abs(dx) <= 4) isBlock = true; 
+                        if (y >= 1 && y <= 4 && dz === 4 && Math.abs(dx) <= 3) isBlock = true; 
+                        
+                        if (dz === 12 && (dx === 0 || dx === -1) && y >= 1 && y <= 3) isBlock = false;
+
+                        if (isBlock) addBlock(cx+dx, cy+y, cz+dz, p);
+                    }
+                }
+            }
+
+            for(let y=2; y<=12; y++) addBlock(cx, cy+y, cz-8, l);
+            for(let dx=-3; dx<=3; dx++) addBlock(cx+dx, cy+11, cz-8, l);
+
+            for(let y=2; y<=16; y++) addBlock(cx, cy+y, cz-1, l);
+            for(let dx=-4; dx<=4; dx++) addBlock(cx+dx, cy+15, cz-1, l);
+
+            for(let y=6; y<=14; y++) addBlock(cx, cy+y, cz+7, l);
+            for(let dx=-3; dx<=3; dx++) addBlock(cx+dx, cy+13, cz+7, l);
+
+            let bz = -12;
+            let by = 5;
+            for (let i = 0; i < 3; i++) {
+                bz--; addBlock(cx, cy+by, cz+bz, l);
+                bz--; addBlock(cx, cy+by, cz+bz, l);
+                by++;
+                if (i < 2) addBlock(cx, cy+by, cz+bz, l);
+            }
+
+            createControlledDoor(cx-1.5, cy+0.5, cz+12.2, 2, 3, 1, 0, 0, Math.PI / 1.5, 2);
+
+            createInteractable(new THREE.BoxGeometry(1.2, 1.4, 2.2), new THREE.MeshLambertMaterial({color:0x5c4033}), cx+2, cy+0.7, cz+8, {type:'desk', zone:2});
+            createInteractable(new THREE.BoxGeometry(0.8, 0.2, 0.6), new THREE.MeshLambertMaterial({color:0x00008b}), cx+2, cy+1.5, cz+8, {type:'book', zone:2});
+            createInteractable(new THREE.BoxGeometry(0.3, 1, 0.3), new THREE.MeshLambertMaterial({color:0xaaaaaa}), cx-3.4, cy+2.0, cz+9, {type:'lever', zone:2});
+
+        }
+
+        // ZONE 3: Hindu Temple (Block 3)
+        function buildHinduTemple(cx, cy, cz) {
+            const s1 = TYPES.SAND;
+            const s2 = TYPES.DIRT; 
+            
+            for (let y = 0; y <= 1; y++) {
+                const r = 12 - y * 2;
+                for (let dx = -r; dx <= r; dx++) {
+                    for (let dz = -r; dz <= r; dz++) {
+                        addBlock(cx + dx, cy + y, cz + dz, (Math.abs(dx)%2===0 && Math.abs(dz)%2===0) ? s2 : s1);
+                    }
+                }
+            }
+
+            for(let y=0; y<=1; y++) {
+                for(let dx=-2; dx<=2; dx++) {
+                    for(let dz=-14+y*2; dz<=-11; dz++) {
+                        addBlock(cx+dx, cy+y, cz+dz, s1);
+                    }
+                }
+            }
+
+            const roomR = 7;
+            for (let y = 2; y <= 10; y++) {
+                for (let dx = -roomR; dx <= roomR; dx++) {
+                    for (let dz = -roomR; dz <= roomR; dz++) {
+                        if (Math.abs(dx) === roomR || Math.abs(dz) === roomR) {
+                            if (dz === -roomR && Math.abs(dx) <= 1 && y >= 2 && y <= 6) continue;
+                            
+                            if (Math.abs(dx) === roomR && Math.abs(dz) === roomR) addBlock(cx+dx, cy+y, cz+dz, s2);
+                            else if (y === 5 || y === 9) addBlock(cx+dx, cy+y, cz+dz, s2);
+                            else addBlock(cx + dx, cy + y, cz + dz, s1);
+                        }
+                    }
+                }
+            }
+
+            for (let y = 2; y <= 6; y++) {
+                addBlock(cx - 3, cy + y, cz - 9, s2);
+                addBlock(cx + 3, cy + y, cz - 9, s2);
+                addBlock(cx - 3, cy + y, cz - 8, s1);
+                addBlock(cx + 3, cy + y, cz - 8, s1);
+            }
+            
+            for(let y = 7; y <= 9; y++) {
+                let pr = 9 - y + 1; 
+                for(let dx = -pr; dx <= pr; dx++) {
+                    for(let dz = -10; dz <= -7; dz++) {
+                        addBlock(cx + dx, cy + y, cz + dz, s1);
+                    }
+                }
+            }
+
+            const tiers = [
+                { yStart: 11, yEnd: 13, r: 8 },
+                { yStart: 14, yEnd: 16, r: 6 },
+                { yStart: 17, yEnd: 19, r: 4 },
+                { yStart: 20, yEnd: 22, r: 2 }
+            ];
+
+            for (let t of tiers) {
+                for (let y = t.yStart; y <= t.yEnd; y++) {
+                    let currentR = t.r - (y - t.yStart);
+                    if (currentR < 1) currentR = 1;
+                    for (let dx = -currentR; dx <= currentR; dx++) {
+                        for (let dz = -currentR; dz <= currentR; dz++) {
+                            addBlock(cx + dx, cy + y, cz + dz, (y % 2 === 0) ? s1 : s2);
+                        }
+                    }
+                    if (y === t.yStart) {
+                        addBlock(cx - currentR - 1, cy + y, cz - currentR - 1, s2);
+                        addBlock(cx + currentR + 1, cy + y, cz - currentR - 1, s2);
+                        addBlock(cx - currentR - 1, cy + y, cz + currentR + 1, s2);
+                        addBlock(cx + currentR + 1, cy + y, cz + currentR + 1, s2);
+                    }
+                }
+            }
+            
+            addBlock(cx, cy + 23, cz, s1);
+            addBlock(cx, cy + 24, cz, s2);
+
+            createControlledDoor(cx - 1.5, cy + 1.1, cz - 7, 3, 4.8, 1.5, 0, 0, -Math.PI / 1.5, 3);
+
+            createInteractable(new THREE.CylinderGeometry(0.5, 0.5, 1.2, 8), new THREE.MeshLambertMaterial({color:0xffffff}), cx, cy+2.1, cz, {type:'desk', zone:3});
+            createInteractable(new THREE.BoxGeometry(0.6, 0.2, 0.6), new THREE.MeshLambertMaterial({color:0x006400}), cx, cy+2.8, cz, {type:'book', zone:3});
+            createInteractable(new THREE.BoxGeometry(0.3, 1, 0.3), new THREE.MeshLambertMaterial({color:0xaaaaaa}), cx-2, cy+4, cz+2, {type:'lever', zone:3});
+
+        }
+
+        // ZONE 4: Pyramid (Block 4)
+        function buildHugePyramid(cx, cy, cz) {
+            const size = 15; 
+            for(let h=0; h<=size; h++) {
+                const r = size - h;
+                for(let dx=-r; dx<=r; dx++) {
+                    for(let dz=-r; dz<=r; dz++) {
+                        if (dx===-r || dx===r || dz===-r || dz===r || h===size) {
+                            if (h<4 && dx>=-1 && dx<=1 && dz===r) continue; 
+                            addBlock(cx+dx, cy+h, cz+dz, TYPES.SAND);
+                        } else if (h===0) {
+                            addBlock(cx+dx, cy-1, cz+dz, TYPES.SAND); 
+                        }
+                    }
+                }
+            }
+            
+            addBlock(cx, cy, cz, TYPES.GOLD); 
+            const light = new THREE.PointLight(0xffdd66, 2.0, 25);
+            light.position.set(cx, cy + 3, cz);
+            scene.add(light);
+
+            createControlledDoor(cx - 1.5, cy, cz + 15, 3, 6, 1.5, 0, 0, -Math.PI / 1.5, 4, -Math.PI / 4);
+
+            createInteractable(new THREE.BoxGeometry(2, 1.2, 1), new THREE.MeshLambertMaterial({color:0xffd700}), cx, cy+0.1, cz+3, {type:'desk', zone:4});
+            createInteractable(new THREE.BoxGeometry(0.8, 0.2, 0.6), new THREE.MeshLambertMaterial({color:0x800080}), cx, cy+0.8, cz+3, {type:'book', zone:4});
+            createInteractable(new THREE.BoxGeometry(0.3, 1, 0.3), new THREE.MeshLambertMaterial({color:0xaaaaaa}), cx+3, cy+2, cz+1, {type:'lever', zone:4});
+
+        }
+
+        function isInsideStructure(x, z, y) {
+            if (x >= 171 && x <= 179 && z >= 103 && z <= 112 && y <= 7) return true; // Shipwreck cabin
+            if (x > 328 && x < 342 && z > 128 && z < 142 && y < 20) return true; // Hut
+            if (Math.abs(x - 100) <= 7 && Math.abs(z - 350) <= 7 && y >= 24 && y < 45) return true; // Temple
+            if (x > 284 && x < 316 && z > 284 && z < 316 && y < 22) return true; // Pyramid
+            return false;
+        }
+
+        function checkCollision(pos) {
+            const r = 0.25; 
+            const waistY = Math.floor(pos.y - 1.2);
+            const headY = Math.floor(pos.y - 0.2);
+            
+            const isSolid = (x, yLevel, z) => {
+                const bx = Math.floor(x + 0.5);
+                const bz = Math.floor(z + 0.5);
+                const t = blocksMap.get(`${bx},${yLevel},${bz}`);
+                return t && t !== TYPES.WATER && t !== TYPES.FLOWER && t !== TYPES.STEM && t !== TYPES.TORCH;
+            };
+            
+            if (isSolid(pos.x, waistY, pos.z) || isSolid(pos.x, headY, pos.z)) return true;
+            if (isSolid(pos.x - r, waistY, pos.z - r) || isSolid(pos.x - r, headY, pos.z - r)) return true;
+            if (isSolid(pos.x + r, waistY, pos.z - r) || isSolid(pos.x + r, headY, pos.z - r)) return true;
+            if (isSolid(pos.x - r, waistY, pos.z + r) || isSolid(pos.x - r, headY, pos.z + r)) return true;
+            if (isSolid(pos.x + r, waistY, pos.z + r) || isSolid(pos.x + r, headY, pos.z + r)) return true;
+
+            const px = pos.x;
+            const py = pos.y;
+            const pz = pos.z;
+
+            for (let key in zones) {
+                const zone = zones[key];
+                if (zone.door && Math.abs(zone.door.group.rotation.y - zone.door.baseRot) < 0.1) {
+                    const d = zone.door;
+                    if (px + r > d.minX && px - r < d.maxX &&
+                        py > d.minY && py - 1.5 < d.maxY &&
+                        pz + r > d.minZ && pz - r < d.maxZ) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        function getFloorHeight(x, z, currentY) {
+            const bx = Math.floor(x + 0.5);
+            const bz = Math.floor(z + 0.5);
+            const startY = Math.floor(currentY - 0.5);
+            
+            for(let y = startY; y > -5; y--) {
+                const type = blocksMap.get(`${bx},${y},${bz}`);
+                if(type && type !== TYPES.WATER && type !== TYPES.FLOWER && type !== TYPES.STEM && type !== TYPES.TORCH) {
+                    return y + 1;
+                }
+            }
+            return 0; 
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updateWeather(delta) {
+            timeOfDay = (timeOfDay + delta) % 360;
+            
+            let isNight = timeOfDay >= 240;
+            let sunAngle = !isNight ? (timeOfDay / 240) * Math.PI - Math.PI : ((timeOfDay - 240) / 120) * Math.PI; 
+            
+            dirLight.position.set(Math.cos(sunAngle) * 300, Math.sin(sunAngle) * 300, 200);
+            
+            let skyColor = new THREE.Color();
+            
+            if (!isNight) {
+                skyColor.setHex(0x7EC8E3);
+                ambientLight.intensity = 0.7;
+                dirLight.intensity = 1.2;
+            } else {
+                skyColor.setHex(0x050515);
+                ambientLight.intensity = 0.2;
+                dirLight.intensity = 0.3;
+            }
+
+            weatherTimer -= delta;
+            if(weatherTimer <= 0) {
+                currentWeather = weatherTypes[Math.floor(Math.random() * weatherTypes.length)];
+                weatherTimer = 40 + Math.random() * 40; 
+            }
+
+            let weatherEmoji = {
+                'SUNNY': isNight ? '🌙' : '☀️', 'CLOUDY': '☁️', 'RAINY': '🌧️',
+                'STORMY': '⛈️', 'WINDY': '🌬️', 'FOGGY': '🌫️', 'SNOWY': '❄️'
+            }[currentWeather];
+            document.getElementById('weatherDisplay').innerText = weatherEmoji;
+
+            switch(currentWeather) {
+                case 'SUNNY': targetWind = 0; targetSnow = 0; targetRain = 0; targetFogDensity = isNight ? 0.003 : 0.001; break;
+                case 'CLOUDY': targetWind = 0.2; targetSnow = 0; targetRain = 0; targetFogDensity = 0.002; break;
+                case 'RAINY': targetWind = 0.3; targetSnow = 0; targetRain = 1; targetFogDensity = 0.003; break;
+                case 'STORMY': targetWind = 1.0; targetSnow = 0; targetRain = 1.5; targetFogDensity = 0.005; break;
+                case 'WINDY': targetWind = 1.5; targetSnow = 0; targetRain = 0; targetFogDensity = 0.002; break;
+                case 'FOGGY': targetWind = 0.1; targetSnow = 0; targetRain = 0; targetFogDensity = 0.02; break;
+                case 'SNOWY': targetWind = 0.3; targetSnow = 1.0; targetRain = 0; targetFogDensity = 0.005; break;
+            }
+
+            globalUniforms.uWind.value += (targetWind - globalUniforms.uWind.value) * delta * 0.5;
+            globalUniforms.uSnow.value += (targetSnow - globalUniforms.uSnow.value) * delta * 0.1; 
+            globalUniforms.uRain.value += (targetRain - globalUniforms.uRain.value) * delta * 2.0;
+            scene.fog.density += (targetFogDensity - scene.fog.density) * delta * 0.2;
+
+            if (currentWeather === 'FOGGY' || currentWeather === 'RAINY' || currentWeather === 'STORMY' || currentWeather === 'SNOWY') {
+                skyColor.lerp(new THREE.Color(isNight ? 0x111111 : 0x8899aa), 0.8);
+            }
+            
+            scene.background.lerpColors(scene.background, skyColor, delta * 0.5);
+            scene.fog.color.copy(scene.background);
+
+            if (audioCtx) {
+                const inStructure = isInsideStructure(camera.position.x, camera.position.z, camera.position.y);
+                const structureMuffle = inStructure ? 0.1 : 1.0;
+                const muteFactor = isMuted ? 0 : 1.0;
+
+                const targetRainVol = globalUniforms.uRain.value * 0.3 * structureMuffle * muteFactor;
+                rainGain.gain.setTargetAtTime(targetRainVol, audioCtx.currentTime, 0.5);
+
+                const targetWindVol = globalUniforms.uWind.value * 0.4 * structureMuffle * muteFactor;
+                windGain.gain.setTargetAtTime(targetWindVol, audioCtx.currentTime, 0.5);
+            }
+
+            let targetCloudOpacity = (currentWeather !== 'SUNNY') ? 0.8 : 0.0;
+            if(cloudParticles) {
+                cloudParticles.material.opacity += (targetCloudOpacity - cloudParticles.material.opacity) * delta * 0.5;
+                const windSpeed = globalUniforms.uWind.value * 5;
+                const dummy = new THREE.Object3D();
+                for(let i=0; i<50; i++) {
+                    cloudParticles.getMatrixAt(i, dummy.matrix);
+                    dummy.matrix.decompose(dummy.position, dummy.quaternion, dummy.scale);
+                    dummy.position.x += windSpeed * delta;
+                    if(dummy.position.x > 600) dummy.position.x = -200;
+                    dummy.updateMatrix();
+                    cloudParticles.setMatrixAt(i, dummy.matrix);
+                }
+                cloudParticles.instanceMatrix.needsUpdate = true;
+            }
+
+            if(rainParticles) {
+                rainParticles.material.opacity = globalUniforms.uRain.value > 0.1 ? 0.6 : 0;
+                if(rainParticles.material.opacity > 0) {
+                    rainParticles.position.x = camera.position.x;
+                    rainParticles.position.z = camera.position.z;
+                    const pos = rainParticles.geometry.attributes.position.array;
+                    for(let i=1; i<pos.length; i+=3) {
+                        pos[i] -= 30 * delta * globalUniforms.uRain.value;
+                        pos[i-1] += globalUniforms.uWind.value * 10 * delta; 
+                        
+                        let worldX = rainParticles.position.x + pos[i-1];
+                        let worldZ = rainParticles.position.z + pos[i+1];
+                        
+                        if(pos[i] < -20 || isInsideStructure(worldX, worldZ, pos[i])) {
+                            pos[i] = 40 + Math.random()*20;
+                            pos[i-1] = (Math.random() - 0.5) * 60;
+                        }
+                    }
+                    rainParticles.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            if(snowParticles) {
+                snowParticles.material.opacity = targetSnow > 0.1 ? 0.8 : 0;
+                if(snowParticles.material.opacity > 0) {
+                    snowParticles.position.x = camera.position.x;
+                    snowParticles.position.z = camera.position.z;
+                    const pos = snowParticles.geometry.attributes.position.array;
+                    for(let i=1; i<pos.length; i+=3) {
+                        pos[i] -= 5 * delta;
+                        pos[i-1] += Math.sin(timeOfDay * 2 + i) * 2 * delta + (globalUniforms.uWind.value * 5 * delta);
+                        
+                        let worldX = snowParticles.position.x + pos[i-1];
+                        let worldZ = snowParticles.position.z + pos[i+1];
+                        
+                        if(pos[i] < -10 || isInsideStructure(worldX, worldZ, pos[i])) {
+                            pos[i] = 40 + Math.random()*20;
+                            pos[i-1] = (Math.random() - 0.5) * 60;
+                        }
+                    }
+                    snowParticles.geometry.attributes.position.needsUpdate = true;
+                }
+            }
+
+            if(currentWeather === 'STORMY') {
+                if(Math.random() < 0.01 && lightningFlash <= 0) {
+                    lightningFlash = 0.2; 
+                    dirLight.intensity = 5.0; 
+                    lightningMesh.position.set(camera.position.x + (Math.random()-0.5)*150, 40, camera.position.z + (Math.random()-0.5)*150);
+                    lightningMesh.rotation.z = (Math.random()-0.5) * 0.5;
+                    lightningMesh.rotation.x = (Math.random()-0.5) * 0.5;
+                    lightningMesh.material.opacity = 1;
+
+                    const inStructure = isInsideStructure(camera.position.x, camera.position.z, camera.position.y);
+                    playThunder(inStructure);
+                }
+            }
+            if(lightningFlash > 0) {
+                lightningFlash -= delta;
+                if(lightningFlash <= 0) {
+                    dirLight.intensity = isNight ? 0.3 : 1.2;
+                    lightningMesh.material.opacity = 0;
+                }
+            }
+        }
+
+        function updateZones(playerPos, delta) {
+            let anyInside = false;
+            let currentTitle = "";
+
+            for(let key in zones) {
+                const zone = zones[key];
+                const dist = Math.hypot(playerPos.x - zone.center.x, playerPos.z - zone.center.z);
+                
+                if (dist < zone.radius && !zone.inside) {
+                    zone.inside = true;
+                    if (!zone.completed) {
+                        zone.door.targetRot = zone.door.baseRot; 
+                        zone.locked = true;
+                    }
+                } else if (dist > zone.radius && zone.inside) {
+                    zone.inside = false;
+                }
+
+                if (zone.inside) {
+                    anyInside = true;
+                    currentTitle = zone.titleText;
+                }
+
+                if (dist > zone.radius + 15 && zone.door && zone.door.targetRot !== zone.door.baseRot) {
+                    zone.door.targetRot = zone.door.baseRot;
+                }
+
+                if (zone.door) {
+                    zone.door.group.rotation.y += (zone.door.targetRot - zone.door.group.rotation.y) * 5.0 * delta;
+                }
+            }
+
+            const titleEl = document.getElementById('zoneTitle');
+            if (anyInside) {
+                if (titleEl.innerText !== currentTitle) titleEl.innerText = currentTitle;
+                titleEl.classList.add('show');
+            } else {
+                titleEl.classList.remove('show');
+            }
+        }
+
+        function updateRaycast() {
+            const textEl = document.getElementById('interactionText');
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const intersects = raycaster.intersectObjects(interactables, false);
+            
+            if (intersects.length > 0 && intersects[0].distance < 6) {
+                const obj = intersects[0].object;
+                textEl.style.display = 'block';
+                
+                if(obj.userData.type === 'door') {
+                    const zone = zones[obj.userData.zone];
+                    if(zone.locked) {
+                        textEl.innerText = "Locked - Pass the Test to Open";
+                        textEl.style.color = "red";
+                    } else {
+                        textEl.innerText = "Click to open/close";
+                        textEl.style.color = "white";
+                    }
+                } else if (obj.userData.type === 'book') {
+                    textEl.innerText = "Click to read Verbs";
+                    textEl.style.color = "yellow";
+                } else if (obj.userData.type === 'lever') {
+                    textEl.innerText = "Click to take Test";
+                    textEl.style.color = "orange";
+                }
+            } else {
+                textEl.style.display = 'none';
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if (controls.isLocked === true) {
+                updateWeather(delta);
+                globalUniforms.uTime.value += delta;
+
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                const playerPos = controls.getObject().position;
+                
+                updateZones(playerPos, delta);
+                updateRaycast();
+
+                const floorY = getFloorHeight(playerPos.x, playerPos.z, playerPos.y);
+                const playerHeight = 1.6;
+                const oceanLevel = 2.0;
+                const waterSurfaceY = oceanLevel + 0.2; 
+                const solidGroundY = floorY + playerHeight;
+                
+                let minHeight = solidGroundY;
+                let isSwimming = false;
+
+                if (solidGroundY < waterSurfaceY && floorY < oceanLevel && !isInsideStructure(playerPos.x, playerPos.z, oceanLevel)) {
+                    minHeight = waterSurfaceY;
+                    isSwimming = true;
+                }
+
+                if (isSwimming && !wasSwimming && velocity.y < -10) createSplash(playerPos.x, oceanLevel, playerPos.z, 40, 1.5); 
+                if (isSwimming && (Math.abs(velocity.x) > 2 || Math.abs(velocity.z) > 2)) {
+                    if (Math.random() < 0.3) createSplash(playerPos.x, oceanLevel, playerPos.z, 2, 0.4);
+                }
+
+                if(globalUniforms.uRain.value > 0.5 && Math.random() < 0.2) {
+                    const rx = playerPos.x + (Math.random()-0.5)*40;
+                    const rz = playerPos.z + (Math.random()-0.5)*40;
+                    if(!isInsideStructure(rx, rz, oceanLevel) && getFloorHeight(rx, rz, 50) <= oceanLevel) {
+                        createSplash(rx, oceanLevel, rz, 1, 0.3);
+                    }
+                }
+
+                if (isSwimming && playerPos.x > 96 && playerPos.x < 104 && playerPos.z > 190 && playerPos.z < 390) {
+                    playerPos.z -= 18.0 * delta;
+                }
+
+                wasSwimming = isSwimming;
+
+                if (isSwimming) {
+                    if (velocity.y < 0) velocity.y -= 15.0 * delta; 
+                    else velocity.y -= 15.0 * delta; 
+                } else {
+                    if (velocity.y < 0) velocity.y -= 90.0 * delta; 
+                    else velocity.y -= 30.0 * delta; 
+                }
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const speedMultiplier = isRunning ? 2.5 : 1.0;
+                const speed = (isSwimming ? 20.0 : 40.0) * speedMultiplier; 
+                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+                const steps = 3;
+                const stepX = (-velocity.x * delta) / steps;
+                const stepZ = (-velocity.z * delta) / steps;
+
+                for (let s = 0; s < steps; s++) {
+                    let wasColliding = checkCollision(controls.getObject().position);
+                    
+                    controls.moveRight(stepX);
+                    if (!wasColliding && checkCollision(controls.getObject().position)) {
+                        controls.moveRight(-stepX); 
+                        velocity.x = 0;
+                    }
+                    
+                    wasColliding = checkCollision(controls.getObject().position);
+                    controls.moveForward(stepZ);
+                    if (!wasColliding && checkCollision(controls.getObject().position)) {
+                        controls.moveForward(-stepZ); 
+                        velocity.z = 0;
+                    }
+                }
+
+                controls.getObject().position.y += (velocity.y * delta);
+                if (controls.getObject().position.y < minHeight) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = minHeight;
+                    canJump = true;
+                }
+            }
+
+            const runTime = time * 0.003;
+
+            if (MATERIALS[TYPES.WATER].userData.shader) {
+                MATERIALS[TYPES.WATER].userData.shader.uniforms.uTime.value = runTime;
+            }
+
+            if(fireParticles) {
+                const positions = fireParticles.geometry.attributes.position.array;
+                for(let i=1; i<positions.length; i+=3) {
+                    positions[i] += 1.5 * delta;
+                    if(positions[i] > 8) {
+                        positions[i] = 4.5; 
+                        positions[i-1] = 270 + (Math.random()-0.5)*0.8; 
+                        positions[i+1] = 120 + (Math.random()-0.5)*0.8; 
+                    }
+                }
+                fireParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            if(volcanoParticles) {
+                const positions = volcanoParticles.geometry.attributes.position.array;
+                for(let i=1; i<positions.length; i+=3) {
+                    positions[i] += 0.2;
+                    if(positions[i] > 65) {
+                        positions[i] = 45; 
+                        positions[i-1] = 100 + (Math.random()-0.5)*6; 
+                        positions[i+1] = 100 + (Math.random()-0.5)*6; 
+                    }
+                }
+                volcanoParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            if(splashParticles) {
+                let active = false;
+                for(let i=0; i<MAX_SPLASH_PARTICLES; i++) {
+                    if(splashLifetimes[i] > 0) {
+                        active = true;
+                        splashLifetimes[i] -= delta;
+                        splashVelocities[i].y -= 15.0 * delta; 
+                        splashPositions[i*3] += splashVelocities[i].x * delta;
+                        splashPositions[i*3+1] += splashVelocities[i].y * delta;
+                        splashPositions[i*3+2] += splashVelocities[i].z * delta;
+                        if(splashLifetimes[i] <= 0 || splashPositions[i*3+1] < 2.0) {
+                            splashLifetimes[i] = 0;
+                            splashPositions[i*3+1] = -1000; 
+                        }
+                    }
+                }
+                if (active) splashParticles.geometry.attributes.position.needsUpdate = true;
+            }
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
